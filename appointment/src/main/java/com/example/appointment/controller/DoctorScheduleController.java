@@ -3,6 +3,7 @@ package com.example.appointment.controller;
 import com.example.appointment.annotation.RequireRole;
 import com.example.appointment.common.Result;
 import com.example.appointment.dto.DoctorScheduleDTO;
+import com.example.appointment.dto.DoctorTimeSlotDTO;
 import com.example.appointment.service.DoctorScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -124,5 +125,19 @@ public class DoctorScheduleController {
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
         log.info("获取最近的排班数据，限制数量: {}", limit);
         return Result.success(scheduleService.getRecentSchedules(limit));
+    }
+    
+    /**
+     * 获取医生可用时间段
+     * @param doctorId 医生ID
+     * @param date 日期
+     * @return 可用时间段列表
+     */
+    @GetMapping("/doctor/{doctorId}/available-time-slots")
+    public Result<List<DoctorTimeSlotDTO>> getAvailableTimeSlots(
+            @PathVariable Long doctorId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        log.info("获取医生可用时间段，医生ID：{}，日期：{}", doctorId, date);
+        return Result.success(scheduleService.getAvailableTimeSlots(doctorId, date));
     }
 }

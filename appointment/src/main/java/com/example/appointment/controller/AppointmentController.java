@@ -144,4 +144,40 @@ public class AppointmentController {
         appointmentService.cancelAppointment(id);
         return Result.success();
     }
+    
+    /**
+     * 管理员预约管理 - 综合查询接口
+     */
+    @GetMapping("/admin")
+    @RequireRole({"ADMIN"})
+    public Result<Page<AppointmentDTO>> getAdminAppointments(
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) Long patientId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String appointmentNumber,
+            Pageable pageable) {
+        log.info("Admin querying appointments with filters: startDate={}, endDate={}, status={}, doctorId={}, patientId={}, departmentId={}, appointmentNumber={}",
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber);
+        return Result.success(appointmentService.getAdminAppointments(
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, pageable));
+    }
+    
+    /**
+     * 管理员更新预约状态接口
+     */
+    @PutMapping("/admin/{id}/status")
+    @RequireRole({"ADMIN"})
+    public Result<AppointmentDTO> adminUpdateAppointmentStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> requestBody) {
+        String status = requestBody.get("status");
+        if (status == null || status.isEmpty()) {
+            throw new IllegalArgumentException("Status cannot be empty");
+        }
+        log.info("Admin updating appointment {} status to {}", id, status);
+        return Result.success(appointmentService.adminUpdateAppointmentStatus(id, status));
+    }
 }

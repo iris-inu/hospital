@@ -237,11 +237,11 @@ const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 // 可用时间段
 const availableTimeSlots = ref([
   { time: '09:00', available: 5 },
-  { time: '10:00', available: 3 },
-  { time: '11:00', available: 2 },
-  { time: '14:00', available: 4 },
-  { time: '15:00', available: 6 },
-  { time: '16:00', available: 1 }
+  { time: '10:00', available: 5 },
+  { time: '11:00', available: 5 },
+  { time: '14:00', available: 5 },
+  { time: '15:00', available: 5 },
+  { time: '16:00', available: 5 }
 ])
 
 // 是否可以继续

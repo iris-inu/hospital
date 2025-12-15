@@ -8,7 +8,7 @@
             <el-icon size="64" color="#1890ff"><FirstAidKit /></el-icon>
           </div>
           <h1>欢迎加入</h1>
-          <p class="welcome-text">华商学院校医院系统</p>
+          <p class="welcome-text">中国海洋大学校医院系统</p>
           <div class="features">
             <div class="feature-item">
               <el-icon size="24" color="#52c41a"><CircleCheck /></el-icon>
@@ -161,15 +161,17 @@
                 </div>
               </el-form-item>
 
-              <el-form-item prop="departmentId">
+              <el-form-item prop="departmentIds">
                 <div class="input-group">
                   <el-icon class="input-icon"><OfficeBuilding /></el-icon>
                   <el-select 
-                    v-model="registerForm.departmentId" 
-                    placeholder="请选择科室"
+                    v-model="registerForm.departmentIds" 
+                    placeholder="请选择科室（最多3个）"
                     class="custom-select"
                     size="large"
                     style="width: 100%"
+                    multiple
+                    :max="3"
                   >
                     <el-option 
                       v-for="dept in departmentOptions" 
@@ -283,7 +285,7 @@ const registerForm = ref({
   email: '',
   // 医生特有字段
   title: '',
-  departmentId: '',
+  departmentIds: [],
   specialty: '',
   introduction: ''
 })
@@ -407,8 +409,9 @@ const registerRules = {
     { required: true, message: '请输入职称', trigger: 'blur' },
     { min: 2, max: 50, message: '职称长度在 2 到 50 个字符', trigger: 'blur' }
   ],
-  departmentId: [
-    { required: true, message: '请选择科室', trigger: 'change' }
+  departmentIds: [
+    { required: true, message: '请至少选择1个科室', trigger: 'change' },
+    { type: 'array', min: 1, max: 3, message: '请选择1-3个科室', trigger: 'change' }
   ],
   specialty: [
     { required: true, message: '请输入专业特长', trigger: 'blur' },
@@ -449,7 +452,7 @@ const handleRegister = async () => {
     if (registerForm.value.role === 'DOCTOR') {
       registerData.doctorInfo = {
         title: registerForm.value.title,
-        departmentId: parseInt(registerForm.value.departmentId),
+        departmentIds: registerForm.value.departmentIds.map(id => parseInt(id)),
         specialty: registerForm.value.specialty,
         introduction: registerForm.value.introduction
       }

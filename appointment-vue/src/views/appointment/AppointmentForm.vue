@@ -210,9 +210,19 @@ const fetchSchedules = async () => {
     console.log('排班列表响应:', response)
     
     if (response.code === 200 && response.data) {
+      // 时间段映射，将时间段代码转换为具体显示文本
+      const timeSlotMap = {
+        'MORNING_FIRST': '08:00-09:00',
+        'MORNING_SECOND': '09:30-10:30',
+        'MORNING_THIRD': '11:00-12:00',
+        'AFTERNOON_FIRST': '14:00-15:00',
+        'AFTERNOON_SECOND': '15:30-16:30',
+        'AFTERNOON_THIRD': '17:00-18:00'
+      }
+      
       scheduleList.value = response.data.map(schedule => ({
         ...schedule,
-        period: schedule.period === 'MORNING' ? '上午' : '下午',
+        period: timeSlotMap[schedule.period] || schedule.period,
         remainingQuota: schedule.availableAppointments
       }))
       console.log('排班列表处理成功:', scheduleList.value)
@@ -296,10 +306,36 @@ const handleAppointment = async (schedule) => {
       return
     }
 
-    // 构建预约时间
+    // 根据具体时间段设置预约时间
     const appointmentTime = new Date(selectedDate.value)
-    const [hours, minutes] = schedule.period === '上午' ? ['09', '00'] : ['14', '00']
-    appointmentTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+    
+    // 根据时间段文本解析具体的小时和分钟
+    let hours, minutes
+    if (schedule.period.includes('08:00-09:00')) {
+      hours = 8
+      minutes = 0
+    } else if (schedule.period.includes('09:30-10:30')) {
+      hours = 9
+      minutes = 30
+    } else if (schedule.period.includes('11:00-12:00')) {
+      hours = 11
+      minutes = 0
+    } else if (schedule.period.includes('14:00-15:00')) {
+      hours = 14
+      minutes = 0
+    } else if (schedule.period.includes('15:30-16:30')) {
+      hours = 15
+      minutes = 30
+    } else if (schedule.period.includes('17:00-18:00')) {
+      hours = 17
+      minutes = 0
+    } else {
+      // 默认值，不应该到达这里
+      hours = 9
+      minutes = 0
+    }
+    
+    appointmentTime.setHours(hours, minutes, 0, 0)
 
     // 创建预约
     await createAppointment({

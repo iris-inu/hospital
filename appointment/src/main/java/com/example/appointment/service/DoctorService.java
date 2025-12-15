@@ -11,7 +11,7 @@ public interface DoctorService {
     DoctorDTO update(Long id, DoctorDTO doctorDTO);
     void delete(Long id);
     DoctorDTO getById(Long id);
-    Page<DoctorDTO> search(String name, Long departmentId, Integer status, Pageable pageable);
+    Page<DoctorDTO> search(String name, Long departmentId, List<Long> departmentIds, Integer status, Pageable pageable);
     List<DoctorDTO> getByDepartment(Long departmentId);
 
     /**

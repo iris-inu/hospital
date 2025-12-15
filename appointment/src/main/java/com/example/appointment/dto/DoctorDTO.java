@@ -2,7 +2,10 @@ package com.example.appointment.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+import java.util.List;
+import java.util.Set;
 
 @Data
 public class DoctorDTO {
@@ -14,8 +17,13 @@ public class DoctorDTO {
         return userId;
     }
     
-    @NotNull(message = "科室ID不能为空")
+    // 兼容旧接口的单科室ID
     private Long departmentId;
+    
+    // 新的多科室ID列表（1-3个）
+    @NotNull(message = "科室ID不能为空")
+    @Size(min = 1, max = 3, message = "请选择1-3个科室")
+    private List<Long> departmentIds;
     
     public Long getDepartmentId() {
         return departmentId;
@@ -48,6 +56,9 @@ public class DoctorDTO {
     
     // 关联信息
     private String departmentName;
+    
+    // 多科室名称列表
+    private Set<String> departmentNames;
     
     public String getName() {
         return name;

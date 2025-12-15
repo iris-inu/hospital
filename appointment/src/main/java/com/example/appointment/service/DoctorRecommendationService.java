@@ -3,6 +3,7 @@ package com.example.appointment.service;
 import com.example.appointment.dto.DoctorDTO;
 import com.example.appointment.dto.DoctorRecommendationDTO;
 import com.example.appointment.entity.Doctor;
+import com.example.appointment.entity.Department;
 import com.example.appointment.entity.User;
 import com.example.appointment.entity.Appointment;
 import com.example.appointment.repository.DoctorRepository;
@@ -26,6 +27,32 @@ public class DoctorRecommendationService {
     private final DoctorRepository doctorRepository;
     private final DoctorReviewRepository doctorReviewRepository;
     private final AppointmentRepository appointmentRepository;
+    
+    /**
+     * 获取医生的第一个关联科室
+     */
+    private Department getFirstDepartment(Doctor doctor) {
+        if (doctor.getDepartments() == null || doctor.getDepartments().isEmpty()) {
+            return null;
+        }
+        return doctor.getDepartments().iterator().next();
+    }
+    
+    /**
+     * 获取医生第一个关联科室的代码
+     */
+    private String getDepartmentCode(Doctor doctor) {
+        Department department = getFirstDepartment(doctor);
+        return department != null ? department.getCode() : null;
+    }
+    
+    /**
+     * 获取医生第一个关联科室的名称
+     */
+    private String getDepartmentName(Doctor doctor) {
+        Department department = getFirstDepartment(doctor);
+        return department != null ? department.getName() : null;
+    }
     
     /**
      * 基于患者历史记录和偏好推荐医生
@@ -66,8 +93,8 @@ public class DoctorRecommendationService {
                     recommendation.setDoctorId(doctor.getId());
                     recommendation.setDoctorName(doctor.getName());
                     recommendation.setDoctorTitle(doctor.getTitle());
-                    recommendation.setDepartmentName(doctor.getDepartment().getName());
-                    recommendation.setDepartmentCode(doctor.getDepartment().getCode());
+                    recommendation.setDepartmentName(getDepartmentName(doctor));
+                    recommendation.setDepartmentCode(getDepartmentCode(doctor));
                     recommendation.setAverageRating(avgRating);
                     recommendation.setReviewCount(reviewCount);
                     recommendation.setScore(avgRating * Math.log(reviewCount + 1)); // 基于评分和评论数量的综合分数
@@ -99,8 +126,8 @@ public class DoctorRecommendationService {
                     recommendation.setDoctorId(doctor.getId());
                     recommendation.setDoctorName(doctor.getName());
                     recommendation.setDoctorTitle(doctor.getTitle());
-                    recommendation.setDepartmentName(doctor.getDepartment().getName());
-                    recommendation.setDepartmentCode(doctor.getDepartment().getCode());
+                    recommendation.setDepartmentName(getDepartmentName(doctor));
+                    recommendation.setDepartmentCode(getDepartmentCode(doctor));
                     recommendation.setAverageRating(getDoctorAverageRating(doctor.getId()));
                     recommendation.setReviewCount(getDoctorReviewCount(doctor.getId()));
                     recommendation.setSymptomMatchScore(symptomMatchScore);
@@ -131,7 +158,7 @@ public class DoctorRecommendationService {
         for (Long similarPatientId : similarPatientIds) {
             List<Appointment> similarAppointments = appointmentRepository.findByPatientId(similarPatientId);
             for (Appointment appointment : similarAppointments) {
-                if (departmentCode.equals(appointment.getDoctor().getDepartment().getCode())) {
+                if (departmentCode.equals(getDepartmentCode(appointment.getDoctor()))) {
                     doctorFrequency.merge(appointment.getDoctor().getId(), 1.0, Double::sum);
                 }
             }
@@ -148,8 +175,8 @@ public class DoctorRecommendationService {
                     recommendation.setDoctorId(doctor.getId());
                     recommendation.setDoctorName(doctor.getName());
                     recommendation.setDoctorTitle(doctor.getTitle());
-                    recommendation.setDepartmentName(doctor.getDepartment().getName());
-                    recommendation.setDepartmentCode(doctor.getDepartment().getCode());
+                    recommendation.setDepartmentName(getDepartmentName(doctor));
+                    recommendation.setDepartmentCode(getDepartmentCode(doctor));
                     recommendation.setAverageRating(getDoctorAverageRating(doctor.getId()));
                     recommendation.setReviewCount(getDoctorReviewCount(doctor.getId()));
                     recommendation.setSimilarPatientChoiceScore(entry.getValue());
@@ -166,8 +193,8 @@ public class DoctorRecommendationService {
         recommendation.setDoctorId(doctor.getId());
         recommendation.setDoctorName(doctor.getName());
         recommendation.setDoctorTitle(doctor.getTitle());
-        recommendation.setDepartmentName(doctor.getDepartment().getName());
-        recommendation.setDepartmentCode(doctor.getDepartment().getCode());
+        recommendation.setDepartmentName(getDepartmentName(doctor));
+        recommendation.setDepartmentCode(getDepartmentCode(doctor));
         
         // 计算各项分数
         double ratingScore = getDoctorRatingScore(doctor.getId());
@@ -254,7 +281,7 @@ public class DoctorRecommendationService {
         }
         
         // 基于科室的匹配
-        String departmentName = doctor.getDepartment().getName();
+        String departmentName = getDepartmentName(doctor);
         if (departmentName.contains("内科") && symptom.contains("发烧")) {
             return 0.8;
         } else if (departmentName.contains("外科") && symptom.contains("疼痛")) {
@@ -292,7 +319,7 @@ public class DoctorRecommendationService {
         Set<Long> similarPatients = new HashSet<>();
         
         for (Appointment appointment : patientAppointments) {
-            String departmentCode = appointment.getDoctor().getDepartment().getCode();
+            String departmentCode = getDepartmentCode(appointment.getDoctor());
             List<Appointment> sameDepartmentAppointments = appointmentRepository
                     .findByDoctorDepartmentCodeAndPatientIdNot(departmentCode, patientId);
             

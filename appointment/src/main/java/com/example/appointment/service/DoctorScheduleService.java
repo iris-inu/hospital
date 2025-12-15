@@ -1,6 +1,7 @@
 package com.example.appointment.service;
 
 import com.example.appointment.dto.DoctorScheduleDTO;
+import com.example.appointment.dto.DoctorTimeSlotDTO;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -57,4 +58,12 @@ public interface DoctorScheduleService {
      * @return 是否已存在排班
      */
     boolean checkPeriodExists(Long doctorId, LocalDate scheduleDate, String period);
+    
+    /**
+     * 获取医生在指定日期的可用时间段
+     * @param doctorId 医生ID
+     * @param scheduleDate 日期
+     * @return 可用时间段列表，包含上午3段、下午3段及剩余号源
+     */
+    List<DoctorTimeSlotDTO> getAvailableTimeSlots(Long doctorId, LocalDate scheduleDate);
 }

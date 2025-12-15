@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,13 +35,12 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     @Transactional
     public DoctorDTO create(DoctorDTO doctorDTO) {
-        // 检查科室是否存在
-        Department department = departmentRepository.findById(doctorDTO.getDepartmentId())
-                .orElseThrow(() -> new RuntimeException("科室不存在"));
-
-        // 检查医生姓名在同一科室是否已存在
-        if (doctorRepository.existsByNameAndDepartmentId(doctorDTO.getName(), doctorDTO.getDepartmentId())) {
-            throw new RuntimeException("该科室已存在同名医生");
+        // 检查科室是否存在并获取
+        Set<Department> departments = new HashSet<>();
+        for (Long deptId : doctorDTO.getDepartmentIds()) {
+            Department department = departmentRepository.findById(deptId)
+                    .orElseThrow(() -> new RuntimeException("科室不存在，ID: " + deptId));
+            departments.add(department);
         }
 
         // 确保userId字段有值
@@ -49,7 +50,7 @@ public class DoctorServiceImpl implements DoctorService {
 
         Doctor doctor = new Doctor();
         doctor.setUserId(doctorDTO.getUserId());  // 显式设置userId
-        updateDoctorFromDTO(doctor, doctorDTO, department);
+        updateDoctorFromDTO(doctor, doctorDTO, departments);
         
         doctor = doctorRepository.save(doctor);
         return convertToDTO(doctor);
@@ -61,16 +62,15 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor doctor = doctorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("医生不存在"));
 
-        Department department = departmentRepository.findById(doctorDTO.getDepartmentId())
-                .orElseThrow(() -> new RuntimeException("科室不存在"));
-
-        // 如果修改了姓名，检查新名称在同一科室是否已存在
-        if (!doctor.getName().equals(doctorDTO.getName()) &&
-                doctorRepository.existsByNameAndDepartmentId(doctorDTO.getName(), doctorDTO.getDepartmentId())) {
-            throw new RuntimeException("该科室已存在同名医生");
+        // 检查科室是否存在并获取
+        Set<Department> departments = new HashSet<>();
+        for (Long deptId : doctorDTO.getDepartmentIds()) {
+            Department department = departmentRepository.findById(deptId)
+                    .orElseThrow(() -> new RuntimeException("科室不存在，ID: " + deptId));
+            departments.add(department);
         }
 
-        updateDoctorFromDTO(doctor, doctorDTO, department);
+        updateDoctorFromDTO(doctor, doctorDTO, departments);
         
         doctor = doctorRepository.save(doctor);
         
@@ -114,17 +114,32 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public Page<DoctorDTO> search(String name, Long departmentId, Integer status, Pageable pageable) {
+    public Page<DoctorDTO> search(String name, Long departmentId, List<Long> departmentIds, Integer status, Pageable pageable) {
         Page<Doctor> doctors;
         
-        if (StringUtils.hasText(name) && departmentId != null && status != null) {
-            doctors = doctorRepository.findDoctorsByNameAndDepartmentAndStatus(name, departmentId, status, pageable);
-        } else if (StringUtils.hasText(name) && status != null) {
-            doctors = doctorRepository.findDoctorsByNameAndStatus(name, status, pageable);
-        } else if (departmentId != null && status != null) {
-            doctors = doctorRepository.findByDepartmentIdAndStatus(departmentId, status, pageable);
+        // 优先使用新的departmentIds参数（多科室筛选）
+        if (departmentIds != null && !departmentIds.isEmpty()) {
+            // 有departmentIds参数，使用多科室筛选
+            if (StringUtils.hasText(name) && status != null) {
+                doctors = doctorRepository.findDoctorsByNameAndDepartmentIdsAndStatus(name, departmentIds, status, pageable);
+            } else if (StringUtils.hasText(name)) {
+                doctors = doctorRepository.findDoctorsByNameAndDepartmentIds(name, departmentIds, pageable);
+            } else if (status != null) {
+                doctors = doctorRepository.findDoctorsByDepartmentIdsAndStatus(departmentIds, status, pageable);
+            } else {
+                doctors = doctorRepository.findDoctorsByDepartmentIds(departmentIds, pageable);
+            }
         } else {
-            doctors = doctorRepository.findAll(pageable);
+            // 没有departmentIds参数，使用旧的单departmentId参数
+            if (StringUtils.hasText(name) && departmentId != null && status != null) {
+                doctors = doctorRepository.findDoctorsByNameAndDepartmentAndStatus(name, departmentId, status, pageable);
+            } else if (StringUtils.hasText(name) && status != null) {
+                doctors = doctorRepository.findDoctorsByNameAndStatus(name, status, pageable);
+            } else if (departmentId != null && status != null) {
+                doctors = doctorRepository.findByDepartmentIdAndStatus(departmentId, status, pageable);
+            } else {
+                doctors = doctorRepository.findAll(pageable);
+            }
         }
         
         return doctors.map(this::convertToDTO);
@@ -152,13 +167,13 @@ public class DoctorServiceImpl implements DoctorService {
         return dto;
     }
 
-    private void updateDoctorFromDTO(Doctor doctor, DoctorDTO dto, Department department) {
+    private void updateDoctorFromDTO(Doctor doctor, DoctorDTO dto, Set<Department> departments) {
         doctor.setName(dto.getName());
         doctor.setTitle(dto.getTitle());
         doctor.setSpecialty(dto.getSpecialty());
         doctor.setIntroduction(dto.getIntroduction());
         doctor.setPhotoUrl(dto.getPhotoUrl());
-        doctor.setDepartment(department);
+        doctor.setDepartments(departments);
         doctor.setStatus(dto.getStatus());
         
         // 设置userId，确保与User表关联
@@ -197,9 +212,26 @@ public class DoctorServiceImpl implements DoctorService {
         dto.setSpecialty(doctor.getSpecialty());
         dto.setIntroduction(doctor.getIntroduction());
         dto.setPhotoUrl(doctor.getPhotoUrl());
-        dto.setDepartmentId(doctor.getDepartment() != null ? doctor.getDepartment().getId() : null);
-        dto.setDepartmentName(doctor.getDepartment() != null ? doctor.getDepartment().getName() : null);
         dto.setStatus(doctor.getStatus());
+        
+        // 处理多科室信息
+        if (doctor.getDepartments() != null && !doctor.getDepartments().isEmpty()) {
+            // 设置departmentIds列表
+            List<Long> departmentIds = doctor.getDepartments().stream()
+                    .map(Department::getId)
+                    .collect(Collectors.toList());
+            dto.setDepartmentIds(departmentIds);
+            
+            // 设置departmentNames集合
+            Set<String> departmentNames = doctor.getDepartments().stream()
+                    .map(Department::getName)
+                    .collect(Collectors.toSet());
+            dto.setDepartmentNames(departmentNames);
+            
+            // 兼容旧接口，设置第一个科室ID
+            dto.setDepartmentId(departmentIds.get(0));
+            dto.setDepartmentName(departmentNames.iterator().next());
+        }
         
         // 获取用户信息
         if (doctor.getUserId() != null) {

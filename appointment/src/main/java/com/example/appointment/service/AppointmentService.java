@@ -45,4 +45,18 @@ public interface AppointmentService {
 
     // 获取当天预约数量
     Long getTodayAppointmentsCount();
+    
+    // 管理员预约管理 - 综合查询
+    Page<AppointmentDTO> getAdminAppointments(
+        LocalDate startDate,
+        LocalDate endDate,
+        String status,
+        Long doctorId,
+        Long patientId,
+        Long departmentId,
+        String appointmentNumber,
+        Pageable pageable);
+    
+    // 管理员更新预约状态
+    AppointmentDTO adminUpdateAppointmentStatus(Long id, String status);
 }

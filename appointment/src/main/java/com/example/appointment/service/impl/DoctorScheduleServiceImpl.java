@@ -1,6 +1,7 @@
 package com.example.appointment.service.impl;
 
 import com.example.appointment.dto.DoctorScheduleDTO;
+import com.example.appointment.dto.DoctorTimeSlotDTO;
 import com.example.appointment.entity.Doctor;
 import com.example.appointment.entity.DoctorSchedule;
 import com.example.appointment.entity.Department;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +47,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
                 .orElseThrow(() -> new BusinessException("医生不存在"));
                 
         // 验证医生是否有关联科室
-        if (doctor.getDepartment() == null) {
+        if (doctor.getDepartments() == null || doctor.getDepartments().isEmpty()) {
             throw new BusinessException("医生未关联科室，无法创建排班");
         }
                 
@@ -67,9 +70,11 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 
         DoctorSchedule schedule = new DoctorSchedule();
         schedule.setDoctorId(scheduleDTO.getDoctorId());
-        schedule.setDepartmentId(doctor.getDepartment().getId());
+        // 设置第一个关联科室的ID作为排班的科室ID
+        schedule.setDepartmentId(doctor.getDepartments().iterator().next().getId());
         schedule.setScheduleDate(scheduleDTO.getScheduleDate());
         schedule.setPeriod(scheduleDTO.getPeriod());
+        schedule.setTimeSlot(scheduleDTO.getTimeSlot());
         schedule.setMaxAppointments(scheduleDTO.getMaxAppointments());
         schedule.setAvailableAppointments(scheduleDTO.getMaxAppointments());
         schedule.setStatus(1);
@@ -115,6 +120,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         }
 
         schedule.setPeriod(scheduleDTO.getPeriod());
+        schedule.setTimeSlot(scheduleDTO.getTimeSlot());
         schedule.setMaxAppointments(scheduleDTO.getMaxAppointments());
         schedule.setStatus(scheduleDTO.getStatus());
 
@@ -290,6 +296,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         dto.setDoctorId(schedule.getDoctorId());
         dto.setScheduleDate(schedule.getScheduleDate());
         dto.setPeriod(schedule.getPeriod());
+        dto.setTimeSlot(schedule.getTimeSlot());
         dto.setMaxAppointments(schedule.getMaxAppointments());
         dto.setAvailableAppointments(schedule.getAvailableAppointments());
         dto.setStatus(schedule.getStatus());
@@ -298,13 +305,19 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         Doctor doctor = doctorRepository.findById(schedule.getDoctorId())
                 .orElseThrow(() -> new BusinessException("医生不存在"));
         dto.setDoctorName(doctor.getName());
-        dto.setDepartmentId(doctor.getDepartment() != null ? doctor.getDepartment().getId() : null);
         
-        // 获取部门信息
-        Department department = doctor.getDepartment() != null ? doctor.getDepartment() : 
-                departmentRepository.findById(doctor.getDepartment().getId())
-                .orElseThrow(() -> new BusinessException("部门不存在"));
-        dto.setDepartmentName(department.getName());
+        // 设置科室信息（使用第一个关联科室）
+        Department department = doctor.getDepartments() != null && !doctor.getDepartments().isEmpty() 
+                ? doctor.getDepartments().iterator().next() 
+                : null;
+        
+        if (department != null) {
+            dto.setDepartmentId(department.getId());
+            dto.setDepartmentName(department.getName());
+        } else {
+            dto.setDepartmentId(null);
+            dto.setDepartmentName(null);
+        }
         
         // 计算拥挤度信息
         calculateCongestionInfo(dto);
@@ -338,5 +351,84 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         } else {
             dto.setCongestionLevel("LOW");
         }
+    }
+    
+    @Override
+    public List<DoctorTimeSlotDTO> getAvailableTimeSlots(Long doctorId, LocalDate scheduleDate) {
+        // 定义默认的6个时间段
+        String[][] defaultTimeSlots = {
+            {"MORNING", "08:00-09:00"},
+            {"MORNING", "09:30-10:30"},
+            {"MORNING", "11:00-12:00"},
+            {"AFTERNOON", "14:00-15:00"},
+            {"AFTERNOON", "15:30-16:30"},
+            {"AFTERNOON", "17:00-18:00"}
+        };
+        
+        List<DoctorTimeSlotDTO> result = new ArrayList<>();
+        
+        // 获取医生在指定日期的排班记录
+        List<DoctorSchedule> schedules = scheduleRepository.findByDoctorIdAndScheduleDate(doctorId, scheduleDate);
+        
+        // 将排班记录转换为Map，方便查找
+        Map<String, DoctorSchedule> scheduleMap = schedules.stream()
+                .filter(schedule -> schedule.getTimeSlot() != null)
+                .collect(Collectors.toMap(
+                        schedule -> schedule.getPeriod() + ":" + schedule.getTimeSlot(),
+                        Function.identity()
+                ));
+        
+        // 为每个默认时间段生成DoctorTimeSlotDTO
+        for (String[] timeSlotInfo : defaultTimeSlots) {
+            String period = timeSlotInfo[0];
+            String timeSlot = timeSlotInfo[1];
+            String key = period + ":" + timeSlot;
+            
+            DoctorTimeSlotDTO timeSlotDTO = new DoctorTimeSlotDTO();
+            timeSlotDTO.setPeriod(period);
+            timeSlotDTO.setTimeSlot(timeSlot);
+            
+            if (scheduleMap.containsKey(key)) {
+                // 如果有排班记录，使用实际的排班信息
+                DoctorSchedule schedule = scheduleMap.get(key);
+                timeSlotDTO.setScheduleId(schedule.getId());
+                timeSlotDTO.setMaxAppointments(schedule.getMaxAppointments());
+                timeSlotDTO.setAvailableAppointments(schedule.getAvailableAppointments());
+                
+                // 计算拥挤度信息
+                Integer bookedAppointments = schedule.getMaxAppointments() - schedule.getAvailableAppointments();
+                double congestionRate = (double) bookedAppointments / schedule.getMaxAppointments();
+                String congestionLevel;
+                
+                if (congestionRate >= 1.0) {
+                    congestionLevel = "FULL";
+                } else if (congestionRate >= 0.8) {
+                    congestionLevel = "HIGH";
+                } else if (congestionRate >= 0.5) {
+                    congestionLevel = "MEDIUM";
+                } else {
+                    congestionLevel = "LOW";
+                }
+                
+                timeSlotDTO.setBookedAppointments(bookedAppointments);
+                timeSlotDTO.setCongestionRate(congestionRate);
+                timeSlotDTO.setCongestionLevel(congestionLevel);
+                
+                // 判断是否有剩余号源
+                timeSlotDTO.setIsAvailable(schedule.getAvailableAppointments() > 0 && schedule.getStatus() == 1);
+            } else {
+                // 如果没有排班记录，设置默认值（不可预约）
+                timeSlotDTO.setMaxAppointments(0);
+                timeSlotDTO.setAvailableAppointments(0);
+                timeSlotDTO.setBookedAppointments(0);
+                timeSlotDTO.setCongestionRate(1.0);
+                timeSlotDTO.setCongestionLevel("FULL");
+                timeSlotDTO.setIsAvailable(false);
+            }
+            
+            result.add(timeSlotDTO);
+        }
+        
+        return result;
     }
 }

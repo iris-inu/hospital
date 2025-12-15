@@ -97,7 +97,7 @@ public class UserServiceImpl implements UserService {
             doctor.setUserId(savedUser.getId());
             doctor.setName(savedUser.getName());
             doctor.setTitle(doctorInfo.getTitle());
-            doctor.setDepartment(department); // 设置关联的科室对象
+            doctor.addDepartment(department); // 添加关联的科室对象
             doctor.setSpecialty(doctorInfo.getSpecialty());
             doctor.setIntroduction(doctorInfo.getIntroduction());
             doctor.setStatus(1); // 设置默认状态为启用

@@ -105,9 +105,10 @@ public class DoctorController {
     public Result<Page<DoctorDTO>> search(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) List<Long> departmentIds,
             @RequestParam(required = false) Integer status,
             Pageable pageable) {
-        return Result.success(doctorService.search(name, departmentId, status, pageable));
+        return Result.success(doctorService.search(name, departmentId, departmentIds, status, pageable));
     }
 
     @GetMapping("/department/{departmentId}")

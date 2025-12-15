@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.util.Set;
+import java.util.HashSet;
 
 @Data
 @Entity
@@ -94,17 +96,11 @@ public class Doctor {
         this.photoUrl = photoUrl;
     }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
-    
-    public Department getDepartment() {
-        return department;
-    }
-    
-    public void setDepartment(Department department) {
-        this.department = department;
-    }
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "doctor_department",
+        joinColumns = @JoinColumn(name = "doctor_id"),
+        inverseJoinColumns = @JoinColumn(name = "department_id"))
+    private Set<Department> departments = new HashSet<>();
 
     @Column(nullable = false)
     private Integer status;
@@ -115,6 +111,28 @@ public class Doctor {
     
     public void setStatus(Integer status) {
         this.status = status;
+    }
+    
+    public Set<Department> getDepartments() {
+        return departments;
+    }
+    
+    public void setDepartments(Set<Department> departments) {
+        if (departments != null && departments.size() > 3) {
+            throw new IllegalArgumentException("医生最多只能关联3个科室");
+        }
+        this.departments = departments;
+    }
+    
+    public void addDepartment(Department department) {
+        if (this.departments.size() >= 3) {
+            throw new IllegalArgumentException("医生最多只能关联3个科室");
+        }
+        this.departments.add(department);
+    }
+    
+    public void removeDepartment(Department department) {
+        this.departments.remove(department);
     }
 
     @Column(name = "created_at", nullable = false)

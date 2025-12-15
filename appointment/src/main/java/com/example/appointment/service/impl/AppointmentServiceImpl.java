@@ -342,11 +342,68 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointmentRepository.countTodayAppointments();
     }
 
+    @Override
+    public Page<AppointmentDTO> getAdminAppointments(
+            LocalDate startDate,
+            LocalDate endDate,
+            String status,
+            Long doctorId,
+            Long patientId,
+            Long departmentId,
+            String appointmentNumber,
+            Pageable pageable) {
+        log.info("Fetching admin appointments with filters - startDate: {}, endDate: {}, status: {}, doctorId: {}, patientId: {}, departmentId: {}, appointmentNumber: {}",
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber);
+        
+        return appointmentRepository.findAdminAppointments(
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, pageable)
+                .map(this::convertToDTO);
+    }
+
+    @Override
+    @Transactional
+    public AppointmentDTO adminUpdateAppointmentStatus(Long id, String status) {
+        log.info("Admin updating appointment status: {} to {}", id, status);
+        
+        Appointment appointment = appointmentRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("预约不存在"));
+            
+        try {
+            AppointmentStatus newStatus = AppointmentStatus.valueOf(status);
+            AppointmentStatus oldStatus = AppointmentStatus.valueOf(appointment.getStatus());
+            
+            // 如果是取消预约，需要增加可用预约数
+            if (newStatus == AppointmentStatus.CANCELLED && oldStatus != AppointmentStatus.CANCELLED) {
+                LocalDate appointmentDate = appointment.getAppointmentTime().toLocalDate();
+                List<DoctorScheduleDTO> schedules = doctorScheduleService.getDoctorSchedules(
+                    appointment.getDoctor().getId(), 
+                    appointmentDate
+                );
+                
+                DoctorScheduleDTO schedule = findMatchingSchedule(
+                    schedules, 
+                    appointment.getAppointmentTime()
+                );
+                
+                if (schedule != null) {
+                    doctorScheduleService.updateAvailableAppointments(schedule.getId(), 1);
+                }
+            }
+            
+            appointment.setStatus(newStatus.name());
+            appointment = appointmentRepository.save(appointment);
+            log.info("Admin updated appointment status successfully");
+            return convertToDTO(appointment);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("无效的预约状态");
+        }
+    }
+
     private AppointmentDTO convertToDTO(Appointment appointment) {
         AppointmentDTO dto = new AppointmentDTO();
         dto.setId(appointment.getId());
-        dto.setDepartmentId(appointment.getDepartment().getId());
-        dto.setDepartmentName(appointment.getDepartment().getName());
+        dto.setDepartmentId(appointment.getDepartment() != null ? appointment.getDepartment().getId() : null);
+        dto.setDepartmentName(appointment.getDepartment() != null ? appointment.getDepartment().getName() : null);
         dto.setDoctorId(appointment.getDoctor().getId());
         dto.setDoctorName(appointment.getDoctor().getName());
         dto.setPatientId(appointment.getPatient().getId());

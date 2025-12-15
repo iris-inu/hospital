@@ -219,8 +219,12 @@ public class AppointmentConflictService {
         }
         
         // 查找同科室的其他医生
+        if (currentDoctor.getDepartments() == null || currentDoctor.getDepartments().isEmpty()) {
+            return Collections.emptyList();
+        }
+        Long departmentId = currentDoctor.getDepartments().iterator().next().getId();
         List<Doctor> departmentDoctors = doctorRepository.findByDepartmentIdAndIdNot(
-                currentDoctor.getDepartment().getId(), currentDoctorId);
+                departmentId, currentDoctorId);
         
         // 筛选出在目标时间可用的医生
         return departmentDoctors.stream()

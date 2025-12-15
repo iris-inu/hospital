@@ -192,4 +192,39 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     default boolean existsByIdCustom(Long id) {
         return countByIdCustom(id) > 0;
     }
+    
+    // 管理员综合预约查询，支持多条件筛选
+    @Query(value = "SELECT a.* FROM appointments a " +
+           "LEFT JOIN doctors d ON a.doctor_id = d.id " +
+           "LEFT JOIN department dept ON d.department_id = dept.id " +
+           "WHERE 1=1 " +
+           "AND (:startDate IS NULL OR DATE(a.appointment_time) >= :startDate) " +
+           "AND (:endDate IS NULL OR DATE(a.appointment_time) <= :endDate) " +
+           "AND (:status IS NULL OR a.status = :status) " +
+           "AND (:doctorId IS NULL OR a.doctor_id = :doctorId) " +
+           "AND (:patientId IS NULL OR a.patient_id = :patientId) " +
+           "AND (:departmentId IS NULL OR d.department_id = :departmentId) " +
+           "AND (:appointmentNumber IS NULL OR a.appointment_number LIKE CONCAT('%', :appointmentNumber, '%')) " +
+           "ORDER BY a.appointment_time DESC", 
+           countQuery = "SELECT COUNT(*) FROM appointments a " +
+           "LEFT JOIN doctors d ON a.doctor_id = d.id " +
+           "LEFT JOIN department dept ON d.department_id = dept.id " +
+           "WHERE 1=1 " +
+           "AND (:startDate IS NULL OR DATE(a.appointment_time) >= :startDate) " +
+           "AND (:endDate IS NULL OR DATE(a.appointment_time) <= :endDate) " +
+           "AND (:status IS NULL OR a.status = :status) " +
+           "AND (:doctorId IS NULL OR a.doctor_id = :doctorId) " +
+           "AND (:patientId IS NULL OR a.patient_id = :patientId) " +
+           "AND (:departmentId IS NULL OR d.department_id = :departmentId) " +
+           "AND (:appointmentNumber IS NULL OR a.appointment_number LIKE CONCAT('%', :appointmentNumber, '%'))",
+           nativeQuery = true)
+    Page<Appointment> findAdminAppointments(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("status") String status,
+        @Param("doctorId") Long doctorId,
+        @Param("patientId") Long patientId,
+        @Param("departmentId") Long departmentId,
+        @Param("appointmentNumber") String appointmentNumber,
+        Pageable pageable);
 }

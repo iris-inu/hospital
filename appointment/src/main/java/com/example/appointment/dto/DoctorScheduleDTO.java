@@ -24,6 +24,8 @@ public class DoctorScheduleDTO {
     @NotNull(message = "请选择时段")
     private String period; // MORNING, AFTERNOON
 
+    private String timeSlot; // 具体时间段，如：08:00-09:00, 09:30-10:30等
+
     @NotNull(message = "请设置最大预约人数")
     private Integer maxAppointments;
 

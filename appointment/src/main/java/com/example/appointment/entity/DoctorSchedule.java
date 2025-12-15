@@ -63,7 +63,10 @@ public class DoctorSchedule {
     }
 
     @Column(name = "period", nullable = false)
-    private String period;
+    private String period; // 上午/下午
+    
+    @Column(name = "time_slot", nullable = false)
+    private String timeSlot; // 具体时间段，如：08:00-09:00, 09:30-10:30等
     
     public String getPeriod() {
         return period;
@@ -71,6 +74,14 @@ public class DoctorSchedule {
     
     public void setPeriod(String period) {
         this.period = period;
+    }
+    
+    public String getTimeSlot() {
+        return timeSlot;
+    }
+    
+    public void setTimeSlot(String timeSlot) {
+        this.timeSlot = timeSlot;
     }
 
     @Column(name = "max_appointments", nullable = false)

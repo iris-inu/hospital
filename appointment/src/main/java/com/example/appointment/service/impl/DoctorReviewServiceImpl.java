@@ -160,7 +160,10 @@ public class DoctorReviewServiceImpl implements DoctorReviewService {
         stats.setDoctorId(doctorId);
         stats.setDoctorName(doctor.getName());
         stats.setDoctorTitle(doctor.getTitle());
-        stats.setDepartmentName(doctor.getDepartment().getName());
+        // 使用第一个关联科室的名称
+        stats.setDepartmentName(doctor.getDepartments() != null && !doctor.getDepartments().isEmpty() 
+                ? doctor.getDepartments().iterator().next().getName() 
+                : null);
         
         // 获取平均评分
         Double averageRating = doctorReviewRepository.getAverageRatingByDoctorId(doctorId);
@@ -277,7 +280,11 @@ public class DoctorReviewServiceImpl implements DoctorReviewService {
         dto.setDoctorId(review.getDoctor().getId());
         dto.setDoctorName(review.getDoctor().getName());
         dto.setDoctorTitle(review.getDoctor().getTitle());
-        dto.setDepartmentName(review.getDoctor().getDepartment().getName());
+        // 使用第一个关联科室的名称
+        Doctor doctor = review.getDoctor();
+        dto.setDepartmentName(doctor.getDepartments() != null && !doctor.getDepartments().isEmpty() 
+                ? doctor.getDepartments().iterator().next().getName() 
+                : null);
         dto.setPatientId(review.getPatient().getId());
         dto.setPatientName(review.getIsAnonymous() ? "匿名用户" : review.getPatient().getName());
         dto.setAppointmentId(review.getAppointment().getId());
