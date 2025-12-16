@@ -439,15 +439,10 @@ const handleSubmit = async () => {
         return
       }
       
-      // 查找选中的医生，确保医生属于所选科室
+      // 查找选中的医生
       const selectedDoctor = doctorOptions.value.find(doc => doc.value === form.value.doctorId)
       if (!selectedDoctor) {
         ElMessage.error('所选医生不存在')
-        return
-      }
-      
-      if (selectedDoctor.departmentId !== form.value.departmentId) {
-        ElMessage.warning('所选医生不属于当前科室，请重新选择')
         return
       }
       

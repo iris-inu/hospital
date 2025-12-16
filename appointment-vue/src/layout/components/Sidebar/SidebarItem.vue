@@ -117,5 +117,4 @@ const resolvePath = (routePath) => {
 
   return routePath
 }
-</script> 
 </script>

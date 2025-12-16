@@ -52,4 +52,14 @@ public interface MedicalRecordService {
      * 查询特定状态的病历
      */
     List<MedicalRecordDTO> getMedicalRecordsByStatus(Integer status);
+    
+    /**
+     * 获取当前患者的病历列表
+     */
+    List<MedicalRecordDTO> getCurrentPatientMedicalRecords();
+    
+    /**
+     * 获取当前医生的病历列表
+     */
+    List<MedicalRecordDTO> getCurrentDoctorMedicalRecords();
 }

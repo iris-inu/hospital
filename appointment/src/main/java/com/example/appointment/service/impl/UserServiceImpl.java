@@ -89,21 +89,24 @@ public class UserServiceImpl implements UserService {
         if ("DOCTOR".equals(registerDTO.getRole().toUpperCase()) && registerDTO.getDoctorInfo() != null) {
             DoctorInfoDTO doctorInfo = registerDTO.getDoctorInfo();
             
-            // 检查科室是否存在
-            Department department = departmentRepository.findById(doctorInfo.getDepartmentId())
-                    .orElseThrow(() -> new RuntimeException("科室不存在"));
-            
             Doctor doctor = new Doctor();
             doctor.setUserId(savedUser.getId());
             doctor.setName(savedUser.getName());
             doctor.setTitle(doctorInfo.getTitle());
-            doctor.addDepartment(department); // 添加关联的科室对象
             doctor.setSpecialty(doctorInfo.getSpecialty());
             doctor.setIntroduction(doctorInfo.getIntroduction());
             doctor.setStatus(1); // 设置默认状态为启用
             
+            // 处理多个科室关联
+            for (Long departmentId : doctorInfo.getDepartmentIds()) {
+                Department department = departmentRepository.findById(departmentId)
+                        .orElseThrow(() -> new RuntimeException("科室不存在: " + departmentId));
+                doctor.addDepartment(department);
+            }
+            
             doctorRepository.save(doctor);
-            log.info("医生用户注册成功，创建医生记录：用户ID={}, 医生姓名={}", savedUser.getId(), savedUser.getName());
+            log.info("医生用户注册成功，创建医生记录：用户ID={}, 医生姓名={}, 关联科室数={}", 
+                    savedUser.getId(), savedUser.getName(), doctor.getDepartments().size());
         }
         
         return convertToDTO(savedUser);

@@ -196,27 +196,33 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // 管理员综合预约查询，支持多条件筛选
     @Query(value = "SELECT a.* FROM appointments a " +
            "LEFT JOIN doctors d ON a.doctor_id = d.id " +
-           "LEFT JOIN department dept ON d.department_id = dept.id " +
+           "LEFT JOIN user u_patient ON a.patient_id = u_patient.id " +
+           "LEFT JOIN user u_doctor ON d.user_id = u_doctor.id " +
            "WHERE 1=1 " +
            "AND (:startDate IS NULL OR DATE(a.appointment_time) >= :startDate) " +
            "AND (:endDate IS NULL OR DATE(a.appointment_time) <= :endDate) " +
            "AND (:status IS NULL OR a.status = :status) " +
            "AND (:doctorId IS NULL OR a.doctor_id = :doctorId) " +
            "AND (:patientId IS NULL OR a.patient_id = :patientId) " +
-           "AND (:departmentId IS NULL OR d.department_id = :departmentId) " +
+           "AND (:departmentId IS NULL OR a.department_id = :departmentId) " +
            "AND (:appointmentNumber IS NULL OR a.appointment_number LIKE CONCAT('%', :appointmentNumber, '%')) " +
+           "AND (:patientName IS NULL OR u_patient.name LIKE CONCAT('%', :patientName, '%')) " +
+           "AND (:doctorName IS NULL OR u_doctor.name LIKE CONCAT('%', :doctorName, '%')) " +
            "ORDER BY a.appointment_time DESC", 
-           countQuery = "SELECT COUNT(*) FROM appointments a " +
+           countQuery = "SELECT COUNT(DISTINCT a.id) FROM appointments a " +
            "LEFT JOIN doctors d ON a.doctor_id = d.id " +
-           "LEFT JOIN department dept ON d.department_id = dept.id " +
+           "LEFT JOIN user u_patient ON a.patient_id = u_patient.id " +
+           "LEFT JOIN user u_doctor ON d.user_id = u_doctor.id " +
            "WHERE 1=1 " +
            "AND (:startDate IS NULL OR DATE(a.appointment_time) >= :startDate) " +
            "AND (:endDate IS NULL OR DATE(a.appointment_time) <= :endDate) " +
            "AND (:status IS NULL OR a.status = :status) " +
            "AND (:doctorId IS NULL OR a.doctor_id = :doctorId) " +
            "AND (:patientId IS NULL OR a.patient_id = :patientId) " +
-           "AND (:departmentId IS NULL OR d.department_id = :departmentId) " +
-           "AND (:appointmentNumber IS NULL OR a.appointment_number LIKE CONCAT('%', :appointmentNumber, '%'))",
+           "AND (:departmentId IS NULL OR a.department_id = :departmentId) " +
+           "AND (:appointmentNumber IS NULL OR a.appointment_number LIKE CONCAT('%', :appointmentNumber, '%')) " +
+           "AND (:patientName IS NULL OR u_patient.name LIKE CONCAT('%', :patientName, '%')) " +
+           "AND (:doctorName IS NULL OR u_doctor.name LIKE CONCAT('%', :doctorName, '%'))",
            nativeQuery = true)
     Page<Appointment> findAdminAppointments(
         @Param("startDate") LocalDate startDate,
@@ -226,5 +232,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         @Param("patientId") Long patientId,
         @Param("departmentId") Long departmentId,
         @Param("appointmentNumber") String appointmentNumber,
+        @Param("patientName") String patientName,
+        @Param("doctorName") String doctorName,
         Pageable pageable);
 }

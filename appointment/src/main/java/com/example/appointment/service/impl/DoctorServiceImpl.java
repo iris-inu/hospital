@@ -137,6 +137,8 @@ public class DoctorServiceImpl implements DoctorService {
                 doctors = doctorRepository.findDoctorsByNameAndStatus(name, status, pageable);
             } else if (departmentId != null && status != null) {
                 doctors = doctorRepository.findByDepartmentIdAndStatus(departmentId, status, pageable);
+            } else if (departmentId != null) {
+                doctors = doctorRepository.findDoctorsByDepartmentId(departmentId, pageable);
             } else {
                 doctors = doctorRepository.findAll(pageable);
             }

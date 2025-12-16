@@ -28,6 +28,12 @@ public class MedicalRecordDTO {
     
     private LocalDateTime updatedAt;
     
+    // 前端使用的字段名，与treatment同义
+    private String treatmentPlan;
+    
+    // 前端使用的字段名，与medication同义
+    private String medicationAdvice;
+    
     // 扩展信息，用于前端显示
     private String patientName;
     

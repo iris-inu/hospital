@@ -158,11 +158,13 @@ public class AppointmentController {
             @RequestParam(required = false) Long patientId,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String appointmentNumber,
+            @RequestParam(required = false) String patientName,
+            @RequestParam(required = false) String doctorName,
             Pageable pageable) {
-        log.info("Admin querying appointments with filters: startDate={}, endDate={}, status={}, doctorId={}, patientId={}, departmentId={}, appointmentNumber={}",
-                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber);
+        log.info("Admin querying appointments with filters: startDate={}, endDate={}, status={}, doctorId={}, patientId={}, departmentId={}, appointmentNumber={}, patientName={}, doctorName={}",
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, patientName, doctorName);
         return Result.success(appointmentService.getAdminAppointments(
-                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, pageable));
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, patientName, doctorName, pageable));
     }
     
     /**

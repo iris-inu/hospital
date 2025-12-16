@@ -673,7 +673,8 @@ onMounted(() => {
     
     :deep(.el-select__wrapper) {
       padding-left: 45px;
-      height: 50px;
+      height: auto;
+      min-height: 50px;
       border-radius: 12px;
       border: 2px solid #e8e8e8;
       font-size: 16px;
@@ -687,6 +688,28 @@ onMounted(() => {
         border-color: #1890ff;
         box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.15);
       }
+    }
+    
+    :deep(.el-select__tags) {
+      padding-left: 0;
+      flex-wrap: wrap;
+    }
+    
+    :deep(.el-select__input-wrapper) {
+      padding-left: 0;
+    }
+    
+    /* 修复多选标签显示问题 */
+    :deep(.el-select__tags-text) {
+      padding: 0;
+      margin: 0;
+    }
+    
+    /* 确保标签和输入框在同一层 */
+    :deep(.el-select__tags),
+    :deep(.el-select__input-wrapper) {
+      position: relative;
+      z-index: 0;
     }
   }
   

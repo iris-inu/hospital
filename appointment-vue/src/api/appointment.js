@@ -1,61 +1,5 @@
 import request from '@/utils/request'
 
-// 症状分析相关API
-export function analyzeSymptoms(data) {
-  return request({
-    url: '/api/symptom-analysis/analyze',
-    method: 'post',
-    data
-  })
-}
-
-export function extractKeywords(symptoms) {
-  return request({
-    url: '/api/symptom-analysis/extract-keywords',
-    method: 'post',
-    data: { symptoms }
-  })
-}
-
-export function calculateMatchScore(data) {
-  return request({
-    url: '/api/symptom-analysis/calculate-match-score',
-    method: 'post',
-    data
-  })
-}
-
-// 一键预约相关API
-export function createOneStepAppointment(data) {
-  return request({
-    url: '/api/one-step/appointment',
-    method: 'post',
-    data
-  })
-}
-
-export function getTimeSlotAvailability(params) {
-  return request({
-    url: '/api/one-step/time-slots/availability',
-    method: 'get',
-    params
-  })
-}
-
-export function getPatientInfo() {
-  return request({
-    url: '/api/one-step/patient-info',
-    method: 'get'
-  })
-}
-
-export function validateOneStepAppointment() {
-  return request({
-    url: '/api/one-step/validation',
-    method: 'get'
-  })
-}
-
 /**
  * 查询可预约时间
  * @param {object} params - 查询参数
@@ -167,7 +111,7 @@ export function getDepartments() {
  */
 export function getAppointmentList(params) {
   return request({
-    url: '/appointments',
+    url: '/appointments/admin',
     method: 'get',
     params
   })
@@ -195,7 +139,7 @@ export function getDepartmentAppointments(departmentId, params) {
  */
 export function checkDoctorAvailability(doctorId, appointmentTime) {
   return request({
-    url: `/doctor/${doctorId}/availability`,
+    url: `/schedule/doctor/${doctorId}/availability`,
     method: 'get',
     params: { appointmentTime }
   })
@@ -210,7 +154,7 @@ export function checkDoctorAvailability(doctorId, appointmentTime) {
  */
 export function getDoctorSchedule(doctorId, startTime, endTime) {
   return request({
-    url: `/doctor/${doctorId}/schedule`,
+    url: `/schedule/doctor/${doctorId}/schedule`,
     method: 'get',
     params: { startTime, endTime }
   })
@@ -235,7 +179,7 @@ export function getDoctorSchedulesByMonth(doctorId, year, month) {
   console.log(`构建查询参数 - 年份:${year}, 月份:${month}, 日期参数:${dateStr}`);
   
   return request({
-    url: `/doctor/${doctorId}/schedules`,
+    url: `/schedule/doctor/${doctorId}/schedules`,
     method: 'get',
     params: { 
       date: dateStr,
@@ -257,7 +201,7 @@ export function getDoctorSchedulesByMonth(doctorId, year, month) {
  */
 export function checkTimeSlotAvailability(doctorId, date, period) {
   return request({
-    url: `/doctor/${doctorId}/time-slots/availability`,
+    url: `/schedule/doctor/${doctorId}/time-slots/availability`,
     method: 'get',
     params: { date, period }
   })
@@ -285,6 +229,20 @@ export function getTodayAppointmentsCount() {
   return request({
     url: '/appointments/today/count',
     method: 'get'
+  })
+}
+
+/**
+ * 导出预约列表
+ * @param {object} params - 查询参数
+ * @returns {Promise}
+ */
+export function exportAppointments(params) {
+  return request({
+    url: '/appointments/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
   })
 }
 
@@ -322,7 +280,7 @@ export function getDoctorSchedules(doctorId, date) {
   console.log('查询医生排班，日期参数:', dateParam);
   
   return request({
-    url: `/doctor/${doctorId}/schedules`,
+    url: `/schedule/doctor/${doctorId}/schedules`,
     method: 'get',
     params: { date: dateParam }
   })

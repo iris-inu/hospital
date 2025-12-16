@@ -74,7 +74,20 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         schedule.setDepartmentId(doctor.getDepartments().iterator().next().getId());
         schedule.setScheduleDate(scheduleDTO.getScheduleDate());
         schedule.setPeriod(scheduleDTO.getPeriod());
-        schedule.setTimeSlot(scheduleDTO.getTimeSlot());
+        
+        // 当timeSlot为空时，根据period自动生成默认时间段
+        String timeSlot = scheduleDTO.getTimeSlot();
+        if (timeSlot == null || timeSlot.isEmpty()) {
+            if ("MORNING".equals(scheduleDTO.getPeriod())) {
+                timeSlot = "08:00-12:00";
+            } else if ("AFTERNOON".equals(scheduleDTO.getPeriod())) {
+                timeSlot = "14:00-18:00";
+            } else {
+                timeSlot = "00:00-24:00";
+            }
+        }
+        schedule.setTimeSlot(timeSlot);
+        
         schedule.setMaxAppointments(scheduleDTO.getMaxAppointments());
         schedule.setAvailableAppointments(scheduleDTO.getMaxAppointments());
         schedule.setStatus(1);
@@ -120,7 +133,20 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         }
 
         schedule.setPeriod(scheduleDTO.getPeriod());
-        schedule.setTimeSlot(scheduleDTO.getTimeSlot());
+        
+        // 当timeSlot为空时，根据period自动生成默认时间段
+        String timeSlot = scheduleDTO.getTimeSlot();
+        if (timeSlot == null || timeSlot.isEmpty()) {
+            if ("MORNING".equals(scheduleDTO.getPeriod())) {
+                timeSlot = "08:00-12:00";
+            } else if ("AFTERNOON".equals(scheduleDTO.getPeriod())) {
+                timeSlot = "14:00-18:00";
+            } else {
+                timeSlot = "00:00-24:00";
+            }
+        }
+        schedule.setTimeSlot(timeSlot);
+        
         schedule.setMaxAppointments(scheduleDTO.getMaxAppointments());
         schedule.setStatus(scheduleDTO.getStatus());
 

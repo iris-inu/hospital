@@ -36,6 +36,14 @@
             >
               取消预约
             </el-button>
+            <el-button
+            v-if="scope.row.status === 'COMPLETED'"
+            type="primary"
+            size="small"
+            @click="handleViewMedicalRecord(scope.row)"
+          >
+            查看病历
+          </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -52,6 +60,29 @@
         />
       </div>
     </el-card>
+
+    <!-- 病历查看对话框 -->
+    <el-dialog
+      v-model="medicalRecordVisible"
+      title="我的病历"
+      width="600px"
+    >
+      <div v-if="currentMedicalRecord" class="medical-record-detail">
+        <div class="detail-section">
+          <h4>基本信息</h4>
+          <p><strong>医生姓名：</strong>{{ currentMedicalRecord.doctorName || '无' }}</p>
+          <p><strong>预约时间：</strong>{{ formatDateTime(currentMedicalRecord.appointmentTime) }}</p>
+          <p><strong>创建时间：</strong>{{ formatDateTime(currentMedicalRecord.createdAt) }}</p>
+        </div>
+        <div class="detail-section">
+          <h4>诊断信息</h4>
+          <p><strong>诊断结果：</strong>{{ currentMedicalRecord.diagnosis || '无' }}</p>
+          <p><strong>治疗方案：</strong>{{ currentMedicalRecord.treatmentPlan || '无' }}</p>
+          <p><strong>用药建议：</strong>{{ currentMedicalRecord.medicationAdvice || '无' }}</p>
+          <p><strong>注意事项：</strong>{{ currentMedicalRecord.notes || '无' }}</p>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -60,6 +91,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useStore } from 'vuex'
 import { getPatientAppointments, cancelAppointment } from '@/api/appointment'
+import { getMedicalRecordByAppointmentId } from '@/api/medicalRecord'
 
 const store = useStore()
 const loading = ref(false)
@@ -67,6 +99,10 @@ const appointments = ref([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+// 病历相关变量
+const medicalRecordVisible = ref(false)
+const currentMedicalRecord = ref(null)
 
 const formatDateTime = (datetime) => {
   if (!datetime) return ''
@@ -174,6 +210,33 @@ const handleCurrentChange = (val) => {
   fetchAppointments()
 }
 
+// 查看病历
+const handleViewMedicalRecord = async (row) => {
+  try {
+    console.log('查看病历按钮被点击，行数据：', row)
+    console.log('预约ID：', row.id)
+    console.log('预约状态：', row.status)
+    
+    loading.value = true
+    console.log('调用API：getMedicalRecordByAppointmentId，参数：', row.id)
+    const response = await getMedicalRecordByAppointmentId(row.id)
+    console.log('API响应：', response)
+    
+    currentMedicalRecord.value = response
+    console.log('设置当前病历：', currentMedicalRecord.value)
+    
+    medicalRecordVisible.value = true
+    console.log('设置病历对话框可见：', medicalRecordVisible.value)
+  } catch (error) {
+    console.error('获取病历失败：', error)
+    console.error('错误详情：', JSON.stringify(error, null, 2))
+    ElMessage.error('获取病历失败：' + (error.message || '未知错误'))
+  } finally {
+    loading.value = false
+    console.log('加载状态设置为false')
+  }
+}
+
 onMounted(() => {
   fetchAppointments()
 })
@@ -192,5 +255,75 @@ onMounted(() => {
     display: flex;
     justify-content: flex-end;
   }
+}
+
+/* 病历详情样式优化 */
+.el-dialog__body {
+  padding: 20px;
+}
+
+.medical-record-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detail-section {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.detail-section:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.detail-section h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 2px solid #e6f7ff;
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.detail-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #1890ff;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+.detail-section p {
+  margin: 12px 0;
+  line-height: 1.8;
+  color: #333;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-section p strong {
+  color: #606266;
+  font-weight: 500;
+  min-width: 120px;
+}
+
+/* 长文本内容优化 */
+.detail-section p:nth-child(n+2):nth-child(-n+5) {
+  flex-direction: column;
+}
+
+.detail-section p:nth-child(n+2):nth-child(-n+5) strong {
+  margin-bottom: 6px;
+  min-width: auto;
 }
 </style> 

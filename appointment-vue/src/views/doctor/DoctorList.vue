@@ -44,7 +44,14 @@
       <el-table-column type="index" label="序号" width="50" />
       <el-table-column prop="name" label="姓名" width="120" />
       <el-table-column prop="title" label="职称" width="120" />
-      <el-table-column prop="departmentName" label="所属科室" width="120" />
+      <el-table-column label="所属科室" width="180">
+        <template #default="{ row }">
+          <el-tag v-for="dept in (row.departments || [])" :key="dept.id" size="small" style="margin-right: 4px;">
+            {{ dept.name }}
+          </el-tag>
+          <span v-if="!row.departments || row.departments.length === 0">无</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="specialty" label="专长" show-overflow-tooltip />
       <el-table-column prop="status" label="状态" width="80">
         <template #default="{ row }">
@@ -90,11 +97,13 @@
         <el-form-item label="职称" prop="title">
           <el-input v-model="doctorForm.title" placeholder="请输入职称" />
         </el-form-item>
-        <el-form-item label="所属科室" prop="departmentId">
+        <el-form-item label="所属科室" prop="departments">
           <el-select
-            v-model="doctorForm.departmentId"
+            v-model="doctorForm.departments"
             placeholder="请选择科室"
             style="width: 100%"
+            multiple
+            collapse-tags
           >
             <el-option
               v-for="item in departmentOptions"
@@ -200,7 +209,7 @@ const doctorForm = reactive({
   id: undefined,
   name: '',
   title: '',
-  departmentId: undefined,
+  departments: [],
   specialty: '',
   introduction: '',
   photoUrl: '',
@@ -215,7 +224,7 @@ const doctorForm = reactive({
 const rules = {
   name: [{ required: true, message: '请输入医生姓名', trigger: 'blur' }],
   title: [{ required: true, message: '请输入职称', trigger: 'blur' }],
-  departmentId: [{ required: true, message: '请选择所属科室', trigger: 'change' }],
+  departments: [{ required: true, message: '请选择所属科室', type: 'array', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   email: [
@@ -380,6 +389,14 @@ const showEditDialog = async (row) => {
       }
     });
     
+    // 转换数据格式，将后端的departmentIds转换为前端的departments
+    if (doctorData.departmentIds) {
+      doctorForm.departments = doctorData.departmentIds;
+    } else if (doctorData.departmentId) {
+      // 兼容旧数据，将单个departmentId转换为数组
+      doctorForm.departments = [doctorData.departmentId];
+    }
+    
     // 特殊处理密码字段 - 编辑时不显示密码
     doctorForm.password = '';
     doctorForm.confirmPassword = '';
@@ -424,7 +441,11 @@ watch(() => doctorForm.password, (newVal) => {
 const handleSubmit = () => {
   doctorFormRef.value.validate(async valid => {
     if (valid) {
+      // 转换数据格式，将departments转换为departmentIds以匹配后端DTO
       const submitData = { ...doctorForm };
+      submitData.departmentIds = submitData.departments;
+      delete submitData.departments;
+      
       loading.value = true;
       
       try {

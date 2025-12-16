@@ -52,6 +52,10 @@
           <el-icon><Calendar /></el-icon>
           <template #title>排班管理</template>
         </el-menu-item>
+        <el-menu-item index="/home/system/appointment-management">
+          <el-icon><Calendar /></el-icon>
+          <template #title>所有预约管理</template>
+        </el-menu-item>
       </el-sub-menu>
     </template>
 

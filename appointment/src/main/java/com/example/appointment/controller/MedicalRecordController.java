@@ -112,4 +112,24 @@ public class MedicalRecordController {
         log.info("根据状态查询病历列表，状态: {}", status);
         return Result.success(medicalRecordService.getMedicalRecordsByStatus(status));
     }
+    
+    /**
+     * 获取当前患者的病历列表
+     */
+    @GetMapping("/patient/current")
+    @RequireRole({"PATIENT"})
+    public Result<List<MedicalRecordDTO>> getCurrentPatientMedicalRecords() {
+        log.info("获取当前患者的病历列表");
+        return Result.success(medicalRecordService.getCurrentPatientMedicalRecords());
+    }
+    
+    /**
+     * 获取当前医生的病历列表
+     */
+    @GetMapping("/doctor/current")
+    @RequireRole({"DOCTOR"})
+    public Result<List<MedicalRecordDTO>> getCurrentDoctorMedicalRecords() {
+        log.info("获取当前医生的病历列表");
+        return Result.success(medicalRecordService.getCurrentDoctorMedicalRecords());
+    }
 }

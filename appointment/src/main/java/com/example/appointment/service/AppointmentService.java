@@ -55,8 +55,13 @@ public interface AppointmentService {
         Long patientId,
         Long departmentId,
         String appointmentNumber,
+        String patientName,
+        String doctorName,
         Pageable pageable);
     
     // 管理员更新预约状态
     AppointmentDTO adminUpdateAppointmentStatus(Long id, String status);
+    
+    // 获取医生在指定日期和时段的预约数量
+    long getDoctorAppointmentCountByDateAndPeriod(Long doctorId, LocalDate date, String period);
 }

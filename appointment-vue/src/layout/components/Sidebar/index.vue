@@ -41,7 +41,7 @@ const sidebarTitle = ref('校医院预约系统')
 
 // 获取路由列表
 const permissionRoutes = computed(() => {
-  return store.state.permission.routes
+  return store.getters['permission/permissionRoutes']
 })
 
 // 获取当前激活的菜单

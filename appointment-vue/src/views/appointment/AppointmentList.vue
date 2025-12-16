@@ -699,9 +699,11 @@ const viewAppointment = () => {
   router.push('/appointment/my')
 }
 
-// 禁用过去的日期
+// 禁用日期
 const disabledDate = (time) => {
-  return time.getTime() < Date.now() - 8.64e7
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return time.getTime() < today.getTime()
 }
 
 // 跳转到快速预约

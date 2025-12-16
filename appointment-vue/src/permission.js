@@ -15,7 +15,6 @@ const routeMapping = {
   '/appointment/list': '/home/appointment/list',
   '/appointment/my': '/home/appointment/my',
   '/appointment/quick': '/home/appointment/quick',
-  '/appointment/one-step': '/home/appointment/one-step',
   '/forum/my-posts': '/home/forum/my-posts',
   '/forum/favorites': '/home/forum/favorites',
   '/doctor/appointments': '/home/doctor/appointments',

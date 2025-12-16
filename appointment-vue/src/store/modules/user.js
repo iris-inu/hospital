@@ -108,7 +108,7 @@ const actions = {
           // 设置角色 - 确保获取正确的角色字段
           let role = null;
           if (typeof userData.role === 'string') {
-            role = userData.role;
+            role = userData.role.toUpperCase();
           } else if (userData.roleId || userData.role_id) {
             // 根据角色ID映射为角色名称
             const roleId = userData.roleId || userData.role_id;
@@ -127,7 +127,7 @@ const actions = {
           commit('SET_ROLES', roles);
           
           // 生成权限路由
-          dispatch('permission/generateRoutes', role, { root: true });
+          dispatch('permission/generateRoutes', roles, { root: true });
           dispatch('permission/fixRoutes', null, { root: true });
           
           // 登录后立即获取完整用户信息
@@ -190,7 +190,7 @@ const actions = {
           commit('SET_ROLES', roles)
           
           // 生成权限路由
-          dispatch('permission/generateRoutes', userInfo.role, { root: true })
+          dispatch('permission/generateRoutes', roles, { root: true })
           dispatch('permission/fixRoutes', null, { root: true })
           
           console.log('从服务器获取用户信息成功:', userInfo.username)
@@ -365,7 +365,7 @@ const actions = {
       commit('SET_ROLES', roles)
       
       // 初始化权限路由
-      dispatch('permission/generateRoutes', userInfo.role, { root: true })
+      dispatch('permission/generateRoutes', roles, { root: true })
       dispatch('permission/fixRoutes', null, { root: true })
       
       console.log('用户状态初始化成功:', { token: !!token, userInfo: userInfo.username, role: userInfo.role })

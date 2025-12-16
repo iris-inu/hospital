@@ -1,8 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/layout/Layout.vue'
-import OneStepAppointment from '@/views/appointment/OneStepAppointment.vue'
 
-const routes = [
+export const routes = [
   {
     path: '/login',
     name: 'Login',
@@ -33,11 +32,6 @@ const routes = [
   {
     path: '/appointment/quick',
     redirect: '/home/appointment/quick',
-    meta: { requiresAuth: true, roles: ['STUDENT', 'TEACHER', 'ADMIN'] }
-  },
-  {
-    path: '/appointment/one-step',
-    redirect: '/home/appointment/one-step',
     meta: { requiresAuth: true, roles: ['STUDENT', 'TEACHER', 'ADMIN'] }
   },
   {
@@ -82,12 +76,6 @@ const routes = [
             name: 'QuickAppointment',
             component: () => import('@/views/appointment/QuickAppointment.vue'),
             meta: { title: '快速预约', roles: ['STUDENT', 'TEACHER', 'ADMIN'] }
-          },
-          {
-            path: 'one-step',
-            name: 'OneStepAppointment',
-            component: () => import('@/views/appointment/OneStepAppointment.vue'),
-            meta: { title: '一键预约', roles: ['STUDENT', 'TEACHER', 'ADMIN'] }
           },
           {
             path: 'list',
@@ -143,8 +131,7 @@ const routes = [
           }
         ]
       },
-      {
-        path: 'doctors',
+      {        path: 'doctors',
         name: 'Doctors',
         meta: { title: '医生管理', roles: ['ADMIN'] },
         children: [
@@ -169,31 +156,7 @@ const routes = [
           }
         ]
       },
-      {
-        path: 'system',
-        name: 'System',
-        meta: { title: '系统管理', roles: ['ADMIN'] },
-        children: [
-          {
-            path: 'users',
-            name: 'UserManagement',
-            component: () => import('@/views/system/UserManagement.vue'),
-            meta: { title: '用户管理', roles: ['ADMIN'] }
-          },
-          {
-            path: 'user-add',
-            name: 'UserAdd',
-            component: () => import('@/views/system/UserAdd.vue'),
-            meta: { title: '添加用户', roles: ['ADMIN'] }
-          },
-          {
-            path: 'user-edit/:id',
-            name: 'UserEdit',
-            component: () => import('@/views/system/UserEdit.vue'),
-            meta: { title: '编辑用户', roles: ['ADMIN'] }
-          }
-        ]
-      },
+      {        path: 'system',        name: 'System',        meta: { title: '系统管理', roles: ['ADMIN'], alwaysShow: true },        children: [          {            path: 'users',            name: 'UserManagement',            component: () => import('@/views/system/UserManagement.vue'),            meta: { title: '用户管理', roles: ['ADMIN'] }          },          {            path: 'appointment-management',            name: 'AdminAppointmentManagement',            component: () => import('@/views/admin/AppointmentManagement.vue'),            meta: { title: '所有预约管理', roles: ['ADMIN'] }          },          {            path: 'user-add',            name: 'UserAdd',            component: () => import('@/views/system/UserAdd.vue'),            meta: { title: '添加用户', roles: ['ADMIN'] }          },          {            path: 'user-edit/:id',            name: 'UserEdit',            component: () => import('@/views/system/UserEdit.vue'),            meta: { title: '编辑用户', roles: ['ADMIN'] }          }        ]      },
 
       // 论坛路由
       {
@@ -268,6 +231,78 @@ const routes = [
         name: 'Profile',
         component: () => import('@/views/Profile.vue'),
         meta: { title: '个人中心', roles: ['ADMIN', 'STUDENT', 'TEACHER', 'DOCTOR'] }
+      },
+      
+      // 病历管理路由
+      {
+        path: 'medical-records',
+        name: 'MedicalRecords',
+        meta: {
+          title: '病历管理',
+          roles: ['STUDENT', 'TEACHER', 'DOCTOR', 'ADMIN']
+        },
+        children: [
+          // 患者端病历列表
+          {
+            path: 'list',
+            name: 'MedicalRecordList',
+            component: () => import('@/views/medicalRecord/MedicalRecordList.vue'),
+            meta: {
+              title: '我的病历',
+              roles: ['STUDENT', 'TEACHER', 'DOCTOR', 'ADMIN']
+            }
+          },
+          // 病历详情
+          {
+            path: 'detail/:id',
+            name: 'MedicalRecordDetail',
+            component: () => import('@/views/medicalRecord/MedicalRecordDetail.vue'),
+            meta: {
+              title: '病历详情',
+              roles: ['STUDENT', 'TEACHER', 'DOCTOR', 'ADMIN']
+            }
+          },
+          // 医生端病历管理
+          {
+            path: 'doctor',
+            name: 'DoctorMedicalRecordManagement',
+            component: () => import('@/views/medicalRecord/DoctorMedicalRecordManagement.vue'),
+            meta: {
+              title: '医生病历管理',
+              roles: ['DOCTOR', 'ADMIN']
+            }
+          },
+          // 创建病历
+          {
+            path: 'create',
+            name: 'CreateMedicalRecord',
+            component: () => import('@/views/medicalRecord/MedicalRecordForm.vue'),
+            meta: {
+              title: '创建病历',
+              roles: ['DOCTOR', 'ADMIN']
+            }
+          },
+          // 编辑病历
+          {
+            path: 'edit/:id',
+            name: 'EditMedicalRecord',
+            component: () => import('@/views/medicalRecord/MedicalRecordForm.vue'),
+            meta: {
+              title: '编辑病历',
+              roles: ['DOCTOR', 'ADMIN']
+            }
+          },
+          // 根据预约创建病历
+          {
+            path: 'create-by-appointment/:appointmentId',
+            name: 'CreateMedicalRecordByAppointment',
+            component: () => import('@/views/medicalRecord/MedicalRecordForm.vue'),
+            meta: {
+              title: '根据预约创建病历',
+              roles: ['DOCTOR', 'ADMIN']
+            }
+          }
+        ]
       }
     ]
   }

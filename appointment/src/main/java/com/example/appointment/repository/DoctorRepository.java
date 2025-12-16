@@ -41,6 +41,11 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
            "WHERE dd.department_id = :departmentId", nativeQuery = true)
     List<Doctor> findByDepartmentId(@Param("departmentId") Long departmentId);
     
+    @Query(value = "SELECT d.* FROM doctors d " +
+           "JOIN doctor_department dd ON d.id = dd.doctor_id " +
+           "WHERE dd.department_id = :departmentId", nativeQuery = true)
+    Page<Doctor> findDoctorsByDepartmentId(@Param("departmentId") Long departmentId, Pageable pageable);
+    
     @Query(value = "SELECT COUNT(*) FROM doctors d " +
            "JOIN doctor_department dd ON d.id = dd.doctor_id " +
            "WHERE d.name = :name AND dd.department_id = :departmentId", nativeQuery = true)

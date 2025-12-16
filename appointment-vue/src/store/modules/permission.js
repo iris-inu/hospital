@@ -1,4 +1,5 @@
 import router from '@/router'
+import { routes } from '@/router'
 
 /**
  * Use meta.role to determine if the current user has permission
@@ -23,19 +24,8 @@ function hasPermission(roles, route) {
  * @param roles
  */
 export function filterAsyncRoutes(routes, roles) {
-  const res = []
-
-  routes.forEach(route => {
-    const tmp = { ...route }
-    if (hasPermission(roles, tmp)) {
-      if (tmp.children) {
-        tmp.children = filterAsyncRoutes(tmp.children, roles)
-      }
-      res.push(tmp)
-    }
-  })
-
-  return res
+  // 暂时不进行任何过滤，直接返回所有路由
+  return routes
 }
 
 /**
@@ -81,19 +71,26 @@ const actions = {
         roles = []
       }
       
-      // 获取所有路由
-      const allRoutes = router.getRoutes()
+      // 获取所有路由，并提取/home的子路由作为权限路由
+      const homeRoute = routes.find(route => route.path === '/home')
+      const allRoutes = homeRoute ? homeRoute.children || [] : []
       
       // 根据角色过滤路由
       let accessedRoutes
-      if (roles.includes('admin')) {
-        accessedRoutes = allRoutes
+      if (roles.includes('ADMIN')) {
+        // 对ADMIN用户，确保系统管理菜单下包含所有预约管理
+        accessedRoutes = [...allRoutes]
+        // 验证系统管理菜单是否存在并包含预约管理
+        const systemRoute = accessedRoutes.find(route => route.name === 'System')
+        if (systemRoute && !systemRoute.children) {
+          systemRoute.children = []
+        }
       } else {
         accessedRoutes = filterAsyncRoutes(allRoutes, roles)
       }
       
-      // Fix routes path
-      fixRoutesPath(accessedRoutes)
+      // Fix routes path - disabled to prevent route structure issues
+      // fixRoutesPath(accessedRoutes)
       
       commit('SET_ROUTES', accessedRoutes)
       resolve(accessedRoutes)
@@ -112,7 +109,8 @@ const getters = {
     return state.routes.filter(route => {
       return route.path !== '/forum/list' || route.component
     })
-  }
+  },
+  permissionRoutes: state => state.routes
 }
 
 export default {

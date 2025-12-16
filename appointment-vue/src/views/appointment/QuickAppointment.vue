@@ -19,26 +19,7 @@
       <div v-if="currentStep === 0" class="step-content">
         <div class="department-selection-header">
           <h3>请选择科室</h3>
-          <el-button 
-            type="primary" 
-            @click="showSymptomAnalysis = true"
-            icon="Search"
-            class="ai-recommend-btn"
-          >
-            🤖 AI智能推荐
-          </el-button>
         </div>
-        
-        <!-- 症状分析对话框 -->
-        <el-dialog
-          v-model="showSymptomAnalysis"
-          title="AI智能科室推荐"
-          width="80%"
-          top="5vh"
-          :close-on-click-modal="false"
-        >
-          <SymptomAnalysis @department-selected="onDepartmentRecommended" />
-        </el-dialog>
         
         <div class="department-grid" v-if="departments.length > 0">
           <el-card 
@@ -95,12 +76,12 @@
             <el-descriptions-item label="医生">{{ selectedDoctor.name }} - {{ selectedDoctor.title }}</el-descriptions-item>
             <el-descriptions-item label="预约日期">
               <el-date-picker
-                v-model="appointmentDate"
-                type="date"
-                placeholder="选择预约日期"
-                :disabled-date="disabledDate"
-                style="width: 100%"
-              />
+                  v-model="appointmentDate"
+                  type="date"
+                  placeholder="选择预约日期"
+                  :disabled-date="disabledDate"
+                  style="width: 100%"
+                />
             </el-descriptions-item>
             <el-descriptions-item label="预约时段">
               <el-radio-group v-model="appointmentPeriod">
@@ -119,24 +100,7 @@
           </el-descriptions>
         </el-card>
 
-        <!-- 可用时间段 -->
-        <div v-if="appointmentDate && appointmentPeriod" class="available-slots">
-          <h4>可用时间段</h4>
-          <div class="time-slots">
-            <el-tag
-              v-for="slot in availableTimeSlots"
-              :key="slot.time"
-              :type="getTimeSlotType(slot)"
-              class="time-slot"
-              @click="selectTimeSlot(slot)"
-              :effect="selectedTimeSlot === slot.time ? 'dark' : 'light'"
-            >
-              {{ slot.time }}
-              <br>
-              <small>{{ getTimeSlotCongestionText(slot) }}</small>
-            </el-tag>
-          </div>
-        </div>
+
       </div>
 
       <!-- 操作按钮 -->
@@ -204,7 +168,6 @@ import {
 import { getDoctorList } from '@/api/doctor'
 import { formatDateTime } from '@/utils/format'
 import { OfficeBuilding, CircleCheck } from '@element-plus/icons-vue'
-import SymptomAnalysis from '@/components/SymptomAnalysis.vue'
 
 const router = useRouter()
 
@@ -227,22 +190,10 @@ const selectedDoctor = ref(null)
 const appointmentDate = ref('')
 const appointmentPeriod = ref('')
 const symptomDescription = ref('')
-const selectedTimeSlot = ref('')
 const appointmentResult = ref({})
-const showSymptomAnalysis = ref(false)
 
 // 默认头像
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-
-// 可用时间段
-const availableTimeSlots = ref([
-  { time: '09:00', available: 5 },
-  { time: '10:00', available: 5 },
-  { time: '11:00', available: 5 },
-  { time: '14:00', available: 5 },
-  { time: '15:00', available: 5 },
-  { time: '16:00', available: 5 }
-])
 
 // 是否可以继续
 const canProceed = computed(() => {
@@ -253,7 +204,7 @@ const canProceed = computed(() => {
 
 // 是否可以提交
 const canSubmit = computed(() => {
-  return appointmentDate.value && appointmentPeriod.value && selectedTimeSlot.value
+  return appointmentDate.value && appointmentPeriod.value
 })
 
 // 获取科室列表
@@ -290,26 +241,7 @@ const selectDoctor = (doctor) => {
   selectedDoctor.value = doctor
 }
 
-// 选择时间段
-const selectTimeSlot = (slot) => {
-  if (slot.available > 0) {
-    selectedTimeSlot.value = slot.time
-  }
-}
 
-// 获取时间段标签类型
-const getTimeSlotType = (slot) => {
-  if (slot.available <= 0) return 'danger'
-  if (slot.available <= 2) return 'warning'
-  return 'success'
-}
-
-// 获取时间段拥挤度文本
-const getTimeSlotCongestionText = (slot) => {
-  if (slot.available <= 0) return '已满'
-  if (slot.available <= 2) return '紧张'
-  return `剩余${slot.available}个`
-}
 
 // 上一步
 const prevStep = () => {
@@ -334,20 +266,82 @@ const submitAppointment = async () => {
   
   submitting.value = true
   try {
-    // 构建预约时间
-    const appointmentDateTime = new Date(appointmentDate.value)
-    const [hours, minutes] = selectedTimeSlot.value.split(':')
-    appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+    // 确保date是YYYY-MM-DD格式字符串
+    let dateParam;
+    if (appointmentDate.value instanceof Date) {
+      dateParam = `${appointmentDate.value.getFullYear()}-${String(appointmentDate.value.getMonth() + 1).padStart(2, '0')}-${String(appointmentDate.value.getDate()).padStart(2, '0')}`;
+    } else if (typeof appointmentDate.value === 'string') {
+      dateParam = appointmentDate.value.split('T')[0];
+    } else {
+      dateParam = appointmentDate.value;
+    }
+    
+    // 获取医生在该日期和时段的预约数量
+    const availabilityResponse = await checkTimeSlotAvailability(selectedDoctor.value.id, dateParam, appointmentPeriod.value)
+    
+    // 检查医生是否有排班
+    if (!availabilityResponse.hasSchedule) {
+      ElMessage.error('该医生在所选日期和时段没有排班，无法预约')
+      return
+    }
+    
+    // 获取预约数量
+    const appointmentCount = availabilityResponse.appointmentCount || 0
+    
+    // 根据预约数量和时段生成具体时间
+    let year, month, day;
+    if (appointmentDate.value instanceof Date) {
+      year = appointmentDate.value.getFullYear();
+      month = appointmentDate.value.getMonth();
+      day = appointmentDate.value.getDate();
+    } else {
+      // 字符串格式，假设是YYYY-MM-DD或YYYY-MM-DDTHH:mm:ss格式
+      const dateParts = appointmentDate.value.split('T')[0].split('-');
+      year = parseInt(dateParts[0]);
+      month = parseInt(dateParts[1]) - 1; // 月份从0开始
+      day = parseInt(dateParts[2]);
+    }
+    
+    // 设置基础时间：上午9点，下午14点
+    const baseHour = appointmentPeriod.value === 'MORNING' ? 9 : 14;
+    const baseMinute = 0;
+    const timeInterval = 20; // 20分钟为一个时间段
+    
+    // 计算具体时间 (预约数量 * 时间间隔)
+    const totalMinutes = baseMinute + (appointmentCount * timeInterval);
+    const hours = baseHour + Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    
+    // 使用本地时间创建日期对象，确保与后端时区一致
+    const appointmentDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+
+    // 创建包含本地时区信息的时间字符串，避免toISOString()导致的时区偏移
+    const formatDateTimeForBackend = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}:00`;
+    };
 
     const response = await createAppointment({
       doctorId: selectedDoctor.value.id,
       departmentId: selectedDepartment.value.id,
-      appointmentTime: appointmentDateTime.toISOString(),
+      appointmentTime: formatDateTimeForBackend(appointmentDateTime),
       description: symptomDescription.value || '快速预约'
     })
 
     // 由于响应拦截器已经处理了code检查，这里直接处理成功情况
     appointmentResult.value = response
+    
+    // 如果后端没有返回formattedAppointmentTime，我们在前端处理一下
+    if (!appointmentResult.value.formattedAppointmentTime) {
+      const hoursStr = String(appointmentDateTime.getHours()).padStart(2, '0')
+      const minutesStr = String(appointmentDateTime.getMinutes()).padStart(2, '0')
+      appointmentResult.value.formattedAppointmentTime = `${hoursStr}:${minutesStr}`
+    }
+    
     successDialogVisible.value = true
     // 显示成功消息
     ElMessage({
@@ -373,8 +367,9 @@ const resetForm = () => {
   appointmentDate.value = ''
   appointmentPeriod.value = ''
   symptomDescription.value = ''
-  selectedTimeSlot.value = ''
 }
+
+
 
 // 禁用日期
 const disabledDate = (time) => {
@@ -394,19 +389,6 @@ const goToMyAppointments = () => {
 const continueAppointment = () => {
   successDialogVisible.value = false
   resetForm()
-}
-
-// AI推荐科室选择处理
-const onDepartmentRecommended = (recommendedDepartment) => {
-  // 查找对应的科室对象
-  const department = departments.value.find(dept => dept.id === recommendedDepartment.departmentId)
-  if (department) {
-    selectedDepartment.value = department
-    showSymptomAnalysis.value = false
-    ElMessage.success(`已选择推荐的科室：${recommendedDepartment.departmentName}（匹配度：${recommendedDepartment.matchScore}%）`)
-  } else {
-    ElMessage.warning('推荐的科室在当前列表中未找到')
-  }
 }
 
 onMounted(() => {
@@ -445,17 +427,6 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-}
-
-.ai-recommend-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  font-weight: 500;
-}
-
-.ai-recommend-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .step-actions {
@@ -571,27 +542,7 @@ onMounted(() => {
   margin: 20px 0;
 }
 
-// 可用时间段
-.available-slots {
-  margin-top: 20px;
-  
-  h4 {
-    margin-bottom: 15px;
-    color: #333;
-  }
-}
 
-.time-slots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.time-slot {
-  cursor: pointer;
-  padding: 8px 16px;
-  font-size: 14px;
-}
 
 // 成功内容
 .success-content {

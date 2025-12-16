@@ -38,7 +38,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="250" fixed="right">
         <template #default="scope">
           <el-button
             v-if="scope.row.status === 'PENDING'"
@@ -57,7 +57,15 @@
             完成就诊
           </el-button>
           <el-button
-            type="info"
+            v-if="scope.row.status === 'COMPLETED'"
+            type="primary"
+            size="small"
+            @click="handleViewMedicalRecord(scope.row)"
+          >
+            查看病历
+          </el-button>
+          <el-button
+            type="primary"
             size="small"
             @click="handleViewDetails(scope.row)"
           >
@@ -92,6 +100,85 @@
         <p><strong>创建时间：</strong>{{ formatDateTime(currentAppointment.createTime) }}</p>
       </div>
     </el-dialog>
+
+    <!-- 病历创建对话框 -->
+    <el-dialog
+      v-model="medicalRecordVisible"
+      title="创建病历"
+      width="600px"
+      :before-close="handleMedicalRecordClose"
+    >
+      <el-form :model="medicalRecordForm" label-width="80px">
+        <el-form-item label="患者姓名" :label-width="'80px'">
+          <el-input v-model="medicalRecordForm.patientName" disabled />
+        </el-form-item>
+        <el-form-item label="预约时间" :label-width="'80px'">
+          <el-input v-model="medicalRecordForm.appointmentTime" disabled />
+        </el-form-item>
+        <el-form-item label="诊断结果" :label-width="'80px'" required>
+          <el-input
+            v-model="medicalRecordForm.diagnosis"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入诊断结果"
+          />
+        </el-form-item>
+        <el-form-item label="治疗方案" :label-width="'80px'" required>
+          <el-input
+            v-model="medicalRecordForm.treatmentPlan"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入治疗方案"
+          />
+        </el-form-item>
+        <el-form-item label="用药建议" :label-width="'80px'">
+          <el-input
+            v-model="medicalRecordForm.medicationAdvice"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入用药建议"
+          />
+        </el-form-item>
+        <el-form-item label="注意事项" :label-width="'80px'">
+          <el-input
+            v-model="medicalRecordForm.notes"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入注意事项"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="medicalRecordVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleCreateMedicalRecord">保存病历</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 病历查看对话框 -->
+    <el-dialog
+      v-model="viewMedicalRecordVisible"
+      title="查看病历"
+      width="600px"
+    >
+      <div v-if="currentMedicalRecord" class="medical-record-detail">
+        <div class="detail-section">
+          <h4>基本信息</h4>
+          <p><strong>患者姓名：</strong>{{ currentMedicalRecord.patientName }}</p>
+          <p><strong>预约时间：</strong>{{ formatDateTime(currentMedicalRecord.appointmentTime) }}</p>
+          <p><strong>医生姓名：</strong>{{ currentMedicalRecord.doctorName || '无' }}</p>
+          <p><strong>创建时间：</strong>{{ formatDateTime(currentMedicalRecord.createdAt) }}</p>
+        </div>
+        <div class="detail-section">
+          <h4>诊断信息</h4>
+          <p><strong>诊断结果：</strong>{{ currentMedicalRecord.diagnosis || '无' }}</p>
+          <p><strong>治疗方案：</strong>{{ currentMedicalRecord.treatmentPlan || '无' }}</p>
+          <p><strong>用药建议：</strong>{{ currentMedicalRecord.medicationAdvice || '无' }}</p>
+          <p><strong>注意事项：</strong>{{ currentMedicalRecord.notes || '无' }}</p>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -100,6 +187,7 @@ import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getDoctorAppointments, updateAppointmentStatus } from '@/api/appointment'
 import { getDoctorByUserId } from '@/api/doctor'
+import { createMedicalRecord, getMedicalRecordByAppointmentId } from '@/api/medicalRecord'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 
@@ -111,6 +199,21 @@ const appointmentList = ref([])
 const detailsVisible = ref(false)
 const currentAppointment = ref(null)
 const doctorInfo = ref(null)
+
+// 病历相关变量
+const medicalRecordVisible = ref(false)
+const viewMedicalRecordVisible = ref(false)
+const medicalRecordForm = ref({
+  appointmentId: null,
+  patientName: '',
+  appointmentTime: '',
+  diagnosis: '',
+  treatmentPlan: '',
+  medicationAdvice: '',
+  notes: ''
+})
+const currentMedicalRecord = ref(null)
+const currentAppointmentForMedicalRecord = ref(null)
 
 const userInfo = computed(() => store.state.user.userInfo)
 const userRole = computed(() => userInfo.value?.role)
@@ -283,18 +386,79 @@ const handleConfirm = async (row) => {
   }
 }
 
-// 完成就诊
-const handleComplete = async (row) => {
+// 完成就诊 - 打开病历创建对话框
+const handleComplete = (row) => {
+  currentAppointmentForMedicalRecord.value = row
+  medicalRecordForm.value = {
+    appointmentId: row.id,
+    patientName: row.patientName,
+    appointmentTime: formatDateTime(row.appointmentTime),
+    diagnosis: '',
+    treatmentPlan: '',
+    medicationAdvice: '',
+    notes: ''
+  }
+  medicalRecordVisible.value = true
+}
+
+// 关闭病历对话框前的确认
+const handleMedicalRecordClose = () => {
+  return ElMessageBox.confirm('是否放弃创建病历？', '提示', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    return true
+  }).catch(() => {
+    return false
+  })
+}
+
+// 创建病历
+const handleCreateMedicalRecord = async () => {
   try {
-    await ElMessageBox.confirm('确认完成就诊吗？')
-    await updateAppointmentStatus(row.id, 'COMPLETED')
-    ElMessage.success('就诊已完成')
+    if (!medicalRecordForm.value.diagnosis || !medicalRecordForm.value.treatmentPlan) {
+      ElMessage.error('诊断结果和治疗方案不能为空')
+      return
+    }
+
+    const medicalRecordData = {
+      appointmentId: medicalRecordForm.value.appointmentId,
+      diagnosis: medicalRecordForm.value.diagnosis,
+      treatmentPlan: medicalRecordForm.value.treatmentPlan,
+      medicationAdvice: medicalRecordForm.value.medicationAdvice,
+      notes: medicalRecordForm.value.notes
+    }
+
+    loading.value = true
+    // 创建病历
+    await createMedicalRecord(medicalRecordData)
+    // 更新预约状态为已完成
+    await updateAppointmentStatus(medicalRecordForm.value.appointmentId, 'COMPLETED')
+    
+    medicalRecordVisible.value = false
+    ElMessage.success('病历创建成功，就诊已完成')
     getList()
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('完成就诊失败：', error)
-      ElMessage.error('完成就诊失败')
-    }
+    console.error('创建病历失败：', error)
+    ElMessage.error('创建病历失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 查看病历
+const handleViewMedicalRecord = async (row) => {
+  try {
+    loading.value = true
+    const response = await getMedicalRecordByAppointmentId(row.id)
+    currentMedicalRecord.value = response
+    viewMedicalRecordVisible.value = true
+  } catch (error) {
+    console.error('获取病历失败：', error)
+    ElMessage.error('获取病历失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -343,5 +507,84 @@ const handleSizeChange = (val) => {
 .el-pagination {
   margin-top: 20px;
   justify-content: center;
+}
+
+/* 病历创建表单样式优化 */
+.el-dialog__body {
+  padding: 20px;
+}
+
+.el-form {
+  max-width: 100%;
+}
+
+.el-form-item {
+  margin-bottom: 20px;
+}
+
+/* 病历详情样式优化 */
+.medical-record-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detail-section {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.detail-section:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.detail-section h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 2px solid #e6f7ff;
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.detail-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #1890ff;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+.detail-section p {
+  margin: 12px 0;
+  line-height: 1.8;
+  color: #333;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-section p strong {
+  color: #606266;
+  font-weight: 500;
+  min-width: 120px;
+}
+
+/* 长文本内容优化 */
+.detail-section p:nth-child(n+2):nth-child(-n+5) {
+  flex-direction: column;
+}
+
+.detail-section p:nth-child(n+2):nth-child(-n+5) strong {
+  margin-bottom: 6px;
+  min-width: auto;
 }
 </style>

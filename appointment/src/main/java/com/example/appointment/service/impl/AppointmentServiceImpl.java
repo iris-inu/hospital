@@ -225,6 +225,11 @@ public class AppointmentServiceImpl implements AppointmentService {
             AppointmentStatus newStatus = AppointmentStatus.valueOf(status);
             AppointmentStatus oldStatus = AppointmentStatus.valueOf(appointment.getStatus());
             
+            // 检查预约是否已完成，如果已完成则不能取消
+            if (oldStatus == AppointmentStatus.COMPLETED && newStatus == AppointmentStatus.CANCELLED) {
+                throw new IllegalArgumentException("已完成的预约不能取消");
+            }
+            
             // 如果是取消预约，需要增加可用预约数
             if (newStatus == AppointmentStatus.CANCELLED && oldStatus != AppointmentStatus.CANCELLED) {
                 LocalDate appointmentDate = appointment.getAppointmentTime().toLocalDate();
@@ -259,6 +264,11 @@ public class AppointmentServiceImpl implements AppointmentService {
         
         Appointment appointment = appointmentRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("预约不存在"));
+        
+        // 检查预约是否已完成，如果已完成则不能取消
+        if (AppointmentStatus.COMPLETED.name().equals(appointment.getStatus())) {
+            throw new IllegalArgumentException("已完成的预约不能取消");
+        }
             
         appointment.setStatus(AppointmentStatus.CANCELLED.name());
         appointmentRepository.save(appointment);
@@ -351,12 +361,14 @@ public class AppointmentServiceImpl implements AppointmentService {
             Long patientId,
             Long departmentId,
             String appointmentNumber,
+            String patientName,
+            String doctorName,
             Pageable pageable) {
-        log.info("Fetching admin appointments with filters - startDate: {}, endDate: {}, status: {}, doctorId: {}, patientId: {}, departmentId: {}, appointmentNumber: {}",
-                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber);
+        log.info("Fetching admin appointments with filters - startDate: {}, endDate: {}, status: {}, doctorId: {}, patientId: {}, departmentId: {}, appointmentNumber: {}, patientName: {}, doctorName: {}",
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, patientName, doctorName);
         
         return appointmentRepository.findAdminAppointments(
-                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, pageable)
+                startDate, endDate, status, doctorId, patientId, departmentId, appointmentNumber, patientName, doctorName, pageable)
                 .map(this::convertToDTO);
     }
 
@@ -397,6 +409,34 @@ public class AppointmentServiceImpl implements AppointmentService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("无效的预约状态");
         }
+    }
+
+    @Override
+    public long getDoctorAppointmentCountByDateAndPeriod(Long doctorId, LocalDate date, String period) {
+        log.info("获取医生 {} 在 {} {} 时段的预约数量", doctorId, date, period);
+        
+        // 根据时段确定时间范围
+        LocalDateTime startTime;
+        LocalDateTime endTime;
+        
+        if ("MORNING".equals(period)) {
+            startTime = date.atTime(8, 0);  // 上午8点开始
+            endTime = date.atTime(12, 0);   // 中午12点结束
+        } else if ("AFTERNOON".equals(period)) {
+            startTime = date.atTime(14, 0); // 下午2点开始
+            endTime = date.atTime(18, 0);   // 下午6点结束
+        } else {
+            throw new IllegalArgumentException("无效的时间段");
+        }
+        
+        // 使用现有的countDoctorAppointmentsInTimeRangeWithStatus方法获取预约数量
+        List<String> validStatuses = List.of("PENDING", "CONFIRMED", "COMPLETED"); // 排除取消状态
+        return appointmentRepository.countDoctorAppointmentsInTimeRangeWithStatus(
+            doctorId, 
+            startTime, 
+            endTime, 
+            validStatuses
+        );
     }
 
     private AppointmentDTO convertToDTO(Appointment appointment) {

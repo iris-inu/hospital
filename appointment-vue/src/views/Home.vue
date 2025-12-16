@@ -41,10 +41,7 @@
               <el-icon><Calendar /></el-icon>
               快速预约
             </el-button>
-            <el-button type="success" size="large" @click="$router.push('/appointment/one-step')">
-              <el-icon><Lightning /></el-icon>
-              一键预约
-            </el-button>
+
           </div>
         </el-card>
       </el-col>

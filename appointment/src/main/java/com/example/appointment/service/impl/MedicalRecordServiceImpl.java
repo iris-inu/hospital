@@ -10,6 +10,7 @@ import com.example.appointment.repository.DoctorRepository;
 import com.example.appointment.repository.MedicalRecordRepository;
 import com.example.appointment.repository.UserRepository;
 import com.example.appointment.service.MedicalRecordService;
+import com.example.appointment.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
     
     @Override
     @Transactional
@@ -40,13 +42,9 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         Appointment appointment = appointmentRepository.findById(medicalRecordDTO.getAppointmentId())
                 .orElseThrow(() -> new RuntimeException("预约不存在，ID: " + medicalRecordDTO.getAppointmentId()));
         
-        // 验证医生是否存在
-        Doctor doctor = doctorRepository.findById(medicalRecordDTO.getDoctorId())
-                .orElseThrow(() -> new RuntimeException("医生不存在，ID: " + medicalRecordDTO.getDoctorId()));
-        
-        // 验证患者是否存在
-        User patient = userRepository.findById(medicalRecordDTO.getPatientId())
-                .orElseThrow(() -> new RuntimeException("患者不存在，ID: " + medicalRecordDTO.getPatientId()));
+        // 从预约中获取医生和患者信息，而不是从DTO中获取
+        Doctor doctor = appointment.getDoctor();
+        User patient = appointment.getPatient();
         
         // 检查是否已经存在该预约的病历
         if (medicalRecordRepository.findByAppointmentId(medicalRecordDTO.getAppointmentId()).isPresent()) {
@@ -59,8 +57,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         medicalRecord.setDoctor(doctor);
         medicalRecord.setPatient(patient);
         medicalRecord.setDiagnosis(medicalRecordDTO.getDiagnosis());
-        medicalRecord.setTreatment(medicalRecordDTO.getTreatment());
-        medicalRecord.setMedication(medicalRecordDTO.getMedication());
+        // 处理字段名映射：前端使用treatmentPlan，后端使用treatment
+        medicalRecord.setTreatment(medicalRecordDTO.getTreatmentPlan());
+        // 处理字段名映射：前端使用medicationAdvice，后端使用medication
+        medicalRecord.setMedication(medicalRecordDTO.getMedicationAdvice());
         medicalRecord.setNotes(medicalRecordDTO.getNotes());
         medicalRecord.setStatus(medicalRecordDTO.getStatus() != null ? medicalRecordDTO.getStatus() : 1);
         
@@ -96,8 +96,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         
         // 更新病历信息
         medicalRecord.setDiagnosis(medicalRecordDTO.getDiagnosis());
-        medicalRecord.setTreatment(medicalRecordDTO.getTreatment());
-        medicalRecord.setMedication(medicalRecordDTO.getMedication());
+        // 处理字段名映射：前端使用treatmentPlan，后端使用treatment
+        medicalRecord.setTreatment(medicalRecordDTO.getTreatmentPlan());
+        // 处理字段名映射：前端使用medicationAdvice，后端使用medication
+        medicalRecord.setMedication(medicalRecordDTO.getMedicationAdvice());
         medicalRecord.setNotes(medicalRecordDTO.getNotes());
         medicalRecord.setStatus(medicalRecordDTO.getStatus());
         
@@ -159,6 +161,29 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
                 .collect(Collectors.toList());
     }
     
+    @Override
+    public List<MedicalRecordDTO> getCurrentPatientMedicalRecords() {
+        log.info("获取当前患者的病历列表");
+        User currentUser = userService.getCurrentUser();
+        return medicalRecordRepository.findByPatientId(currentUser.getId())
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<MedicalRecordDTO> getCurrentDoctorMedicalRecords() {
+        log.info("获取当前医生的病历列表");
+        User currentUser = userService.getCurrentUser();
+        // 查找医生信息
+        Doctor doctor = doctorRepository.findByUserId(currentUser.getId())
+                .orElseThrow(() -> new RuntimeException("医生信息不存在"));
+        return medicalRecordRepository.findByDoctorId(doctor.getId())
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+    
     /**
      * 转换实体到DTO
      */
@@ -169,8 +194,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         dto.setDoctorId(medicalRecord.getDoctor().getId());
         dto.setPatientId(medicalRecord.getPatient().getId());
         dto.setDiagnosis(medicalRecord.getDiagnosis());
-        dto.setTreatment(medicalRecord.getTreatment());
-        dto.setMedication(medicalRecord.getMedication());
+        // 处理字段名映射：后端使用treatment，前端使用treatmentPlan
+        dto.setTreatmentPlan(medicalRecord.getTreatment());
+        // 处理字段名映射：后端使用medication，前端使用medicationAdvice
+        dto.setMedicationAdvice(medicalRecord.getMedication());
         dto.setNotes(medicalRecord.getNotes());
         dto.setStatus(medicalRecord.getStatus());
         dto.setCreatedAt(medicalRecord.getCreatedAt());

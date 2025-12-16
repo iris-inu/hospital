@@ -26,7 +26,7 @@ public class AuthController {
             if (registerDTO.getDoctorInfo().getTitle() == null || registerDTO.getDoctorInfo().getTitle().trim().isEmpty()) {
                 throw new RuntimeException("医生职称不能为空");
             }
-            if (registerDTO.getDoctorInfo().getDepartmentId() == null) {
+            if (registerDTO.getDoctorInfo().getDepartmentIds() == null || registerDTO.getDoctorInfo().getDepartmentIds().isEmpty()) {
                 throw new RuntimeException("医生科室不能为空");
             }
             if (registerDTO.getDoctorInfo().getSpecialty() == null || registerDTO.getDoctorInfo().getSpecialty().trim().isEmpty()) {

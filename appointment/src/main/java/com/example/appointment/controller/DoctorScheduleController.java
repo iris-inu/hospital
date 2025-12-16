@@ -4,6 +4,7 @@ import com.example.appointment.annotation.RequireRole;
 import com.example.appointment.common.Result;
 import com.example.appointment.dto.DoctorScheduleDTO;
 import com.example.appointment.dto.DoctorTimeSlotDTO;
+import com.example.appointment.service.AppointmentService;
 import com.example.appointment.service.DoctorScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class DoctorScheduleController {
     private static final Logger log = LoggerFactory.getLogger(DoctorScheduleController.class);
 
     private final DoctorScheduleService scheduleService;
+    private final AppointmentService appointmentService;
 
     @PostMapping
     @RequireRole({"ADMIN", "DOCTOR"})
@@ -96,23 +98,33 @@ public class DoctorScheduleController {
     }
     
     /**
-     * 检查医生时间段可用性
+     * 检查医生时间段可用性并获取预约数量
      * @param doctorId 医生ID
      * @param date 日期
      * @param period 时间段（上午/下午/晚上）
-     * @return 可用性信息
+     * @return 可用性信息和预约数量
      */
     @GetMapping("/doctor/{doctorId}/time-slots/availability")
-    public Result<Boolean> checkTimeSlotAvailability(
+    public Result<java.util.Map<String, Object>> checkTimeSlotAvailability(
             @PathVariable Long doctorId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam String period) {
         log.info("检查医生时间段可用性，医生ID：{}，日期：{}，时间段：{}", doctorId, date, period);
         
         // 检查该时间段是否已存在排班
-        boolean isAvailable = !scheduleService.checkPeriodExists(doctorId, date, period);
+        boolean hasSchedule = scheduleService.checkPeriodExists(doctorId, date, period);
         
-        return Result.success(isAvailable);
+        // 如果有排班，获取预约数量
+        long appointmentCount = 0;
+        if (hasSchedule) {
+            appointmentCount = appointmentService.getDoctorAppointmentCountByDateAndPeriod(doctorId, date, period);
+        }
+        
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("hasSchedule", hasSchedule);
+        result.put("appointmentCount", appointmentCount);
+        
+        return Result.success(result);
     }
 
     /**
